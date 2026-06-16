@@ -15,7 +15,7 @@ pnpm add git+ssh://git@github.com/talesofai/topic-sdk.git
 # 或 https：pnpm add git+https://github.com/talesofai/topic-sdk.git
 ```
 
-> 安装时会自动执行 `prepare` 脚本构建 `dist/`（需 Node 工具链；devDependencies 会被自动安装）。
+> 仓库已提交预构建的 `dist/`，`pnpm add` 直接可用，**无需本地构建**（也无需 pnpm `onlyBuiltDependencies` 放行构建脚本——git 依赖默认禁止执行 build 脚本）。
 
 或用 CI 产出的 **release tarball**（无需本地构建）：从仓库 Releases 下载 `.tgz` 后
 
@@ -53,9 +53,9 @@ const page = await sdk.topic.listStories("春日活动", { pageIndex: 0, pageSiz
 ## 开发本 SDK
 
 ```bash
-pnpm install      # 会触发 prepare → 自动 build 一次
+pnpm install
 pnpm typecheck    # tsc --noEmit
-pnpm build        # tsup → dist (ESM + CJS + d.ts)
+pnpm build        # tsup → dist (ESM + CJS + d.ts)；改了 src 后需重新构建并提交 dist
 ```
 
 ## 构建与分发（CI/CD）

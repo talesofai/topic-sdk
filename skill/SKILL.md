@@ -38,7 +38,7 @@ description: >-
 
 把本 skill 的 `scaffold/` 目录复制成创作者项目，然后：
 - 全局把占位符 `__TOPIC_UUID__` 替换成真实 `<uuid>`（出现在 `vite.config.ts`、`package.json` 的 upload 脚本里）。
-- `@talesofai/topic-sdk` 在 `package.json` 里是 **git 依赖**（`git+https://github.com/talesofai/topic-sdk.git`，组织内私有仓库；`pnpm install` 时自动 clone + `prepare` 构建，需对该仓库有访问权）。**不发 npm。** `scaffold/.npmrc` 把 `@talesofai` scope 指向私有 registry，**仅供上传工具 `@talesofai/ali-oss-utils`**；其余依赖走公共 npmjs。
+- `@talesofai/topic-sdk` 在 `package.json` 里是 **git 依赖**（`git+https://github.com/talesofai/topic-sdk.git`，组织内私有仓库；`pnpm install` 时 clone 仓库并直接使用其中已提交的预构建 `dist/`，**无构建脚本、零摩擦**，需对该仓库有访问权）。**不发 npm。** `scaffold/.npmrc` 把 `@talesofai` scope 指向私有 registry，**仅供上传工具 `@talesofai/ali-oss-utils`**；其余依赖走公共 npmjs。
 - `cp .env.example .env` 并填入 STS 凭证（`.env` 不提交）。
 - `pnpm install`。
 
