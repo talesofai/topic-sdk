@@ -4,6 +4,7 @@
   "description": "SDK for external creators to build custom embedded topic pages on nieta-app (talesofai).",
   "author": "talesofai",
   "license": "UNLICENSED",
+  "private": true,
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -25,14 +26,11 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run typecheck && npm run build"
-  },
-  "publishConfig": {
-    "registry": "https://registry.npm.talesofai.cn/"
+    "prepare": "tsup"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://git.talesofai.com/dyx/topic-sdk.git"
+    "url": "git+https://github.com/talesofai/topic-sdk.git"
   },
   "devDependencies": {
     "tsup": "^7.2.0",

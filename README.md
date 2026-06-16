@@ -6,16 +6,21 @@
 
 ## 安装
 
-SDK 发布在组织私有 registry。在你的项目根加 `.npmrc`：
+本包**不发布到 npm registry**，从私有 GitHub 源码仓库安装（组织内 `talesofai/topic-sdk`，private）。
 
-```
-@talesofai:registry=https://registry.npm.talesofai.cn/
-```
-
-然后：
+组织内成员（有仓库访问权）直接装 git 源：
 
 ```bash
-pnpm add @talesofai/topic-sdk
+pnpm add git+ssh://git@github.com/talesofai/topic-sdk.git
+# 或 https：pnpm add git+https://github.com/talesofai/topic-sdk.git
+```
+
+> 安装时会自动执行 `prepare` 脚本构建 `dist/`（需 Node 工具链；devDependencies 会被自动安装）。
+
+或用 CI 产出的 **release tarball**（无需本地构建）：从仓库 Releases 下载 `.tgz` 后
+
+```bash
+pnpm add ./talesofai-topic-sdk-<version>.tgz
 ```
 
 ## 快速开始
@@ -48,15 +53,13 @@ const page = await sdk.topic.listStories("春日活动", { pageIndex: 0, pageSiz
 ## 开发本 SDK
 
 ```bash
-pnpm install
-pnpm typecheck   # tsc --noEmit
-pnpm build       # tsup → dist (ESM + CJS + d.ts)
+pnpm install      # 会触发 prepare → 自动 build 一次
+pnpm typecheck    # tsc --noEmit
+pnpm build        # tsup → dist (ESM + CJS + d.ts)
 ```
 
-## 发布
+## 构建与分发（CI/CD）
 
-`publishConfig.registry` 指向私有 registry。`prepublishOnly` 会先 typecheck + build。
+CI（`.github/workflows/ci.yml`）在 push / PR 上跑 `typecheck` + `build`，并上传 `dist` 与 `npm pack` 的 tarball 作为构建产物；打 `v*` tag 时额外创建带 `.tgz` 的 GitHub Release。
 
-```bash
-npm publish
-```
+**不发布到 npm**（`package.json` 设 `"private": true` 兜底，防误发）。分发走上面的 git 源码安装或 release tarball。
