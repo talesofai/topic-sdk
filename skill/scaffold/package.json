@@ -12,7 +12,7 @@
     "publish": "pnpm build && pnpm upload-assets && pnpm upload-html"
   },
   "dependencies": {
-    "@talesofai/topic-sdk": "^0.1.0",
+    "@talesofai/topic-sdk": "git+https://github.com/talesofai/topic-sdk.git",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
