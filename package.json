@@ -1,6 +1,6 @@
 {
   "name": "@talesofai/topic-sdk",
-  "version": "0.1.0",
+  "version": "0.1.0-dev.0",
   "description": "SDK for external creators to build custom embedded topic pages on nieta-app (talesofai).",
   "author": "talesofai",
   "license": "UNLICENSED",
@@ -32,7 +32,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/talesofai/topic-sdk.git"
+    "url": "git+https://git.talesofai.com/dyx/topic-sdk.git"
   },
   "devDependencies": {
     "tsup": "^7.2.0",
