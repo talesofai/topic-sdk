@@ -1,0 +1,27 @@
+{
+  "name": "my-topic-page",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "upload-assets": "ali-oss-upload-cli upload --source ./dist --target static/topic/__TOPIC_UUID__/ --filter \"!*.html\" --headers \"Cache-Control:max-age=31536000\" --skipConsCheck --force",
+    "upload-html": "ali-oss-upload-cli upload --source ./dist --target static/topic/__TOPIC_UUID__/ --filter \"*.html\" --headers \"Cache-Control:no-cache,no-store,must-revalidate\" --headers \"Content-Security-Policy:default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https://oss.talesofai.cn; media-src 'self' https://oss.talesofai.cn; font-src 'self'; connect-src 'self' https://api.talesofai.cn https://pre.api.talesofai.cn; frame-ancestors https://app.nieta.art capacitor://app.nieta.art; upgrade-insecure-requests\" --skipConsCheck --force",
+    "publish": "pnpm build && pnpm upload-assets && pnpm upload-html"
+  },
+  "dependencies": {
+    "@talesofai/topic-sdk": "^0.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@talesofai/ali-oss-utils": "^0.2.1",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.9.3",
+    "vite": "^5.4.0"
+  }
+}

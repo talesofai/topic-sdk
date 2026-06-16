@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- 嵌入态宿主已处理顶部安全区 + Navbar，页面不要再加 safeTop 内边距 -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>话题页</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- 注意：禁用 history.pushState（用 hash/内存路由），否则 Android 返回键会先消费 iframe 内 history -->
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
