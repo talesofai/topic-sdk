@@ -46,9 +46,11 @@ const page = await sdk.topic.listStories("春日活动", { pageIndex: 0, pageSiz
 `skill/` 目录是一个 **Claude Code skill**：把它装进你的 Claude Code（`.claude/skills/`），让 agent 引导你从零脚手架、开发、自测、构建、上传 OSS，并逐项过合规红线。
 
 - `skill/SKILL.md` —— agent 执行工作流（含校验门）
-- `skill/COMPLIANCE.md` —— 上线红线 checklist
-- `skill/reference/api-cheatsheet.md` —— 离线 API/契约速查
-- `skill/scaffold/` —— 起步项目模板（vite + react）
+- `skill/references/compliance.md` —— 上线红线 checklist
+- `skill/references/api-cheatsheet.md` —— 离线 API/契约速查
+- `skill/references/migrate-existing-html.md` —— 现成 HTML 改造指南
+- `skill/references/onboarding.md` —— 运营/创作者/管理员上手指南
+- `skill/assets/scaffold/` —— 起步项目模板（vite + react）
 
 ## 开发本 SDK
 
