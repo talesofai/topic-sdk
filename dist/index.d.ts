@@ -175,7 +175,7 @@ interface ViewportInfo {
     height: number;
 }
 interface TopicSDKOptions {
-    /** 后端 API 基址，默认 'https://api.talesofai.cn' */
+    /** 后端 API 基址，默认 'https://pre.api.talesofai.cn' */
     apiBaseUrl?: string;
     /** hello 握手超时 ms，默认 1500 */
     helloTimeout?: number;

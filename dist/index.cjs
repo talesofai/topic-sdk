@@ -733,7 +733,7 @@ var SDKUiImpl = class {
 var SDK_VERSION = "0.1.0";
 async function createTopicSDK(options = {}) {
   const {
-    apiBaseUrl = "https://api.talesofai.cn",
+    apiBaseUrl = "https://pre.api.talesofai.cn",
     helloTimeout = 1500,
     tokenTimeout = 3e3,
     tokenRefreshEarlyMs = 5 * 60 * 1e3,

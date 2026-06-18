@@ -68,7 +68,7 @@ const SDK_VERSION = "0.1.0";
  */
 export async function createTopicSDK(options: TopicSDKOptions = {}): Promise<TopicSDK> {
   const {
-    apiBaseUrl = "https://api.talesofai.cn",
+    apiBaseUrl = "https://pre.api.talesofai.cn",
     helloTimeout = 1500,
     tokenTimeout = 3000,
     tokenRefreshEarlyMs = 5 * 60 * 1000,
