@@ -63,7 +63,7 @@
 - **查当前绑定 + 历史版本**:`GET <base>/v1/topic-embed/activities/<uuid>/embed-page/versions` → 返回 `{enabled, active_version, versions[]}`。
 - **回滚 / 切到某历史版本**(无需重传):`POST <base>/v1/topic-embed/activities/<uuid>/embed-page/activate`,body `{"version": N}`(N 必须在 versions 里且其 OSS 目录还在)。
 - **下线内嵌页**(`/tag` 回落原生话题页,版本记录保留可再启用):`POST <base>/v1/topic-embed/activities/<uuid>/embed-page/unbind`。
-- **发新版本**:重跑 `pnpm publish`（内部团队在发布项目里执行），deploy 脚本自增版本号并自动绑为新生效版;超出保留上限(默认 5 个)的旧版本 OSS 目录会被清理。
+- **发新版本**:重跑 `pnpm deploy:prod`（内部团队在发布项目里执行），deploy 脚本自增版本号并自动绑为新生效版;超出保留上限(默认 5 个)的旧版本 OSS 目录会被清理。
 
 > 多话题各自独立(一个活动一份绑定),没有批量接口;发布权限仅限内部员工（`is_internal`）。
 

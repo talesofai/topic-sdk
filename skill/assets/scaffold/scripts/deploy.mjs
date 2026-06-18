@@ -220,6 +220,7 @@ async function main() {
     endpoint: rawEndpoint,
     allowed_suffixes,
     max_file_size,
+    hashtag_name,
   } = grant;
   if (
     typeof version !== "number" ||
@@ -334,7 +335,9 @@ async function main() {
     // dev 草稿：active_version 不变（不激活），打印草稿版本供调试
     info(`草稿发布成功！version=${version}（未激活，公众看不到）。`);
     info(`在 app 内打开话题页 → 开发者菜单 → 选"版本 ${version}"即可在真实 embed 上下文调试。`);
-    info(`也可直链：/tag?hashtag=<X>&embedPreview=${version}`);
+    info(
+      `也可直链：/tag?hashtag=${hashtag_name ? encodeURIComponent(hashtag_name) : "<X>"}&embedPreview=${version}`,
+    );
     info(`调试满意后，联系内部团队用 --target prod 上线。`);
   } else {
     // prod 上线：断言 active_version 已切换到本次版本

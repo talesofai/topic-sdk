@@ -20,6 +20,11 @@ export default defineConfig(({ command }) => ({
       "/v1": {
         target: "https://pre.api.talesofai.cn",
         changeOrigin: true,
+        // 内部 pre 联调:pre 网关要求 x-develop-pass。设了 NIETA_DEVELOP_PASS 才带(与 deploy.mjs 同一开关);
+        // 外部创作者不设此 env、恒不带;日后切到 prod target 时也不需要。
+        ...(process.env.NIETA_DEVELOP_PASS
+          ? { headers: { "x-develop-pass": process.env.NIETA_DEVELOP_PASS } }
+          : {}),
       },
     },
   },

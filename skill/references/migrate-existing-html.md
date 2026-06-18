@@ -444,7 +444,7 @@ function navigate(view: string) { currentView = view; renderView(); }
 | §4 | 验证数据渲染：`getDetail`/`listStories` 成功，可空字段均判空 |
 | §5 | 验证导航：所有 `nav.internal` 的 route 在 AllowedRoute 白名单内；游客写意图走 `openApp` |
 | §6 | 三上下文自测（iOS 真机 / Android 真机 / Web 内嵌 + 游客裸链），逐项过 references/compliance.md F 段 |
-| §7 | `pnpm deploy:dry` 干跑预检通过，然后 `pnpm publish` 正式上线 |
+| §7 | `pnpm deploy:dry` 干跑预检通过，然后 `pnpm deploy:prod` 正式上线 |
 | §8 | 逐项过 references/compliance.md A-G 所有红线，任一不过不上线 |
 
 **改造后额外的自检项**（原 scaffold 不需要、迁移才需要）：
