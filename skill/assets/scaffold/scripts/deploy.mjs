@@ -196,6 +196,12 @@ async function main() {
       ? { "x-dev-publish-token": env.devToken }
       : { "x-token": env.apiToken };
 
+  // 内部 pre 联调用：pre 网关要求 x-develop-pass 头。真实创作者发 prod 不设此 env，恒 no-op、不影响公开流程。
+  // grant 与 publish 都走 authHeaders，故二者一并带上。
+  if (process.env.NIETA_DEVELOP_PASS) {
+    authHeaders["x-develop-pass"] = process.env.NIETA_DEVELOP_PASS;
+  }
+
   // 1) upload-grant
   info(`请求 upload-grant（activity_uuid=${activityUuid}）...`);
   const grant = await requestJson(
