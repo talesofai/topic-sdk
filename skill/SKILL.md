@@ -1,38 +1,36 @@
 ---
 name: nieta-topic-page
 description: >-
-  Build, self-check, and ship a custom embedded 话题页 (topic page) for nieta-app
-  using the @talesofai/topic-sdk runtime. Use this when a creator or operator (or an
-  agent acting for them) wants to scaffold a custom topic page, render read-only
-  /v1/embed data, handle the app / web-embedded / guest three-state degradation,
-  wire navigation and guest open-app, build the project, and upload it to OSS with
-  the correct CSP. Triggers: "自定义话题页", "内嵌话题页", "topic-sdk", "embed topic page",
-  "上传话题页到 OSS".
+  Scaffold, develop, self-check, and publish a dev-draft of a custom embedded
+  话题页 (topic page) for nieta-app using the @talesofai/topic-sdk runtime. Use
+  this when a creator (or an agent acting for them) wants to build a custom topic
+  page, render read-only /v1/embed data, handle the app / web-embedded / guest
+  three-state degradation, wire navigation and guest open-app, and publish a
+  draft for in-app debugging. The creator delivers the finished and debugged
+  project to the internal team for prod publishing. Triggers: "自定义话题页",
+  "内嵌话题页", "topic-sdk", "embed topic page", "搭话题页".
 ---
 
-# nieta-app 自定义内嵌话题页 — 开发与上线 skill
+# nieta-app 自定义内嵌话题页 — 搭建、开发与 dev 发布 skill
 
-你（agent）正代创作者/运营开发一个**内嵌话题页**：一个独立的 Web 单页应用，打包上传到 OSS，由 nieta-app 在 `/tag?hashtag=X` 路由内以 **iframe** 内嵌。页面只**读**产品内数据（`/v1/embed/*`），所有写动作由宿主固定浮层承载，页面既不绘制也不调用。
+你（agent）正代创作者开发一个**内嵌话题页**：一个独立的 Web 单页应用，由 nieta-app 在 `/tag?hashtag=X` 路由内以 **iframe** 内嵌。页面只**读**产品内数据（`/v1/embed/*`），所有写动作由宿主固定浮层承载，页面既不绘制也不调用。
 
-按下面的工作流走，每步带**校验门**，过了再进下一步。详细契约见 `references/api-cheatsheet.md`，红线见 `references/compliance.md`（**上线前必须逐项过**）。
+按下面的工作流走，每步带**校验门**，过了再进下一步。详细契约见 `references/api-cheatsheet.md`，红线见 `references/compliance.md`（**交付前必须逐项过**）。
 
 ## 入门前必看（非技术用户先看这里）
 
-做内嵌话题页，你（用户）只要先备齐**三样**，技术活之后全交给 agent：
-1. **你本人的 nieta 登录 token**（`NIETA_API_TOKEN`）——上线时证明"是你在操作"。
-2. **运营/平台分配给这个话题的 `activity_uuid`**——话题在产品里的身份（该活动须已发布 `PUBLISHED`、你对它有管理权）。
-3. **后端地址 `NIETA_API_BASE`**（正式 `https://api.talesofai.cn`）。
+做内嵌话题页，你（创作者）只要说清楚**业务内容**（话题要展示什么、按钮点了跳哪里），技术活全交给 agent。
 
-> **这三样只在最后"上线（§7）"那一步才硬性需要。** 还没拿到也能先开工：让 agent 起脚手架、（若有现成 HTML）改造、开发、本地预览、构建，临上线再补填 `.env`。所以"我还没有 token/uuid"**不挡**先做。
-> **已有现成 HTML**：把 HTML（或链接）连同上面三样一起给 agent，说"我有个现成页面想做成话题页"，agent 走 §2 的现成-HTML 入口。
-> 装 SDK 需要对私有仓库 `talesofai/topic-sdk` 的 GitHub **读权限**（见 `references/onboarding.md` A1），让管理员一次性配好。
+> **发布模型**：创作者可以自己发**草稿**（dev 令牌 + `pnpm deploy:dev`，不上线），然后在 app 内用开发者菜单挑这个版本调试；满意后**请内部团队**用 `pnpm deploy:prod` 上线。**创作者只能发草稿（dev），永不能上线（prod）。**
+> **已有现成 HTML**：把 HTML（或链接）给 agent，说"我有个现成页面想做成话题页"，agent 走 §2 的现成-HTML 入口。
+> **SDK 安装**：`@talesofai/topic-sdk` 是**公开仓库**（`github.com/talesofai/topic-sdk`），`pnpm install` 时直接通过 git 源安装，任何人免认证可装，无需特殊权限。
 
 ## 总原则（本 skill 的用户多为**非技术的运营/产品同事**，务必遵守）
 
-- **你（agent）代劳一切技术活**：脚手架、写代码、接数据、构建、上传、上线、排错，全部你做。用户不写代码、不碰命令行细节。
+- **你（agent）代劳一切技术活**：脚手架、写代码、接数据、开发、自测、排错，全部你做。用户不写代码、不碰命令行细节。
 - **绝不把技术决策抛给用户**：CSP、AllowedRoute、缓存策略、构建/路由配置、依赖、字段名、token 机制等**一律由你按本 skill / `references/compliance.md` 默认决定**，不要问用户。若标准不支持用户现成页里的某个技术做法，按 `references/migrate-existing-html.md` 的默认处置，**不要回头问技术问题**。
-- **只用大白话问"业务"信息，且尽量一次问全**：话题的 `activity_uuid`、用户本人的登录 token、某按钮点了希望跳到哪个站内页、这个话题页要展示哪些内容（榜单/作品/角色）。例：不要问"AllowedRoute 白名单要加哪些 route"，要问"这个'去看榜单'按钮，点了你希望跳到哪个页面?"。
-- **错误你来读、你来修**：报错先自己对照校验门与 `references/compliance.md` 诊断修复；只有确实需要用户提供外部信息（权限、token、uuid、业务意图）时，才用大白话说明"需要你做什么"。
+- **只用大白话问"业务"信息，且尽量一次问全**：话题的 `activity_uuid`（用于 dev 发布和本地 dev proxy 自测）、某按钮点了希望跳到哪个站内页、这个话题页要展示哪些内容（榜单/作品/角色）。例：不要问"AllowedRoute 白名单要加哪些 route"，要问"这个'去看榜单'按钮，点了你希望跳到哪个页面?"。
+- **错误你来读、你来修**：报错先自己对照校验门与 `references/compliance.md` 诊断修复；只有确实需要用户提供外部信息（业务意图）时，才用大白话说明"需要你做什么"。
 - **两条入口**：① 从零做新页 → 走 §2 起脚手架；② **用户已有现成 HTML** → 先按 `references/migrate-existing-html.md` 把它改造进 scaffold，再回到 §3 继续。
 
 ## 0. 先读死规矩（贯穿全程，违反即返工）
@@ -45,29 +43,16 @@ description: >-
 6. **viewport `safeTop` 由宿主处理**：页面顶部**不要**再加安全区/Navbar 内边距；只处理 `safeBottom` + 键盘 inset。
 7. **三上下文都要兼容**：`app`（iOS/Android 壳）、`web-embedded`（网页版 `/webview`）、`guest`（浏览器裸链，无宿主、token 为 null、写动作唤起 App）。
 
-## 1. 前置条件（上线 §7 才硬性需要，可后补；不挡 §2–§6）
-
-取得三样东西，填进 `.env`（见 `assets/scaffold/.env.example`）：
-1. **`NIETA_API_TOKEN`**：创作者/运营自己登录 nieta-app 后的 **API bearer token**（**必须是本人 token，不得用他人的**）。上线脚本用它调 `GET /v1/oss/upload-grant` 实时换取**只 scope 到本话题前缀**的临时 STS（**不再静态持有任何 OSS 凭证，也不再用永久 AK**）。鉴权要求：调用者对该话题有 `can_manage_embed_page` 权限（运营白名单 / 该话题创作者 / 内部员工），且 activity 须 `PUBLISHED`。
-2. **`NIETA_ACTIVITY_UUID`**：平台/运营分配给本话题的 `activity_uuid`（对应 OSS 路径 `sts/topic-embed/<uuid>/<version>/`，version 由 grant 自增分配）。
-3. **`NIETA_API_BASE`**：后端基址，正式 `https://api.talesofai.cn`。
-
-环境：Node >= 18、pnpm >= 8。创作者在**自己的独立项目**里开发，**无需进 nieta monorepo**。
-
-**校验门（仅针对上线 §7）**：跑 `pnpm publish` 前 `NIETA_API_TOKEN` / `NIETA_ACTIVITY_UUID` / `NIETA_API_BASE` 必须就绪。但**起脚手架 / 改造现成 HTML / 开发 / 构建（§2–§6）不需要它们**——先做，临上线再补填 `.env`，避免"没 token 就卡死"。Node/pnpm 版本则一开始就要达标。**与 §2「现成 HTML」无先后冲突**：有现成 HTML 就先走 §2 改造，token/uuid 留到 §7 再补。
-
 ## 2. 起脚手架（从 `assets/scaffold/` 复制）
 
 > **若用户已有现成 HTML**：先走 `references/migrate-existing-html.md`（把现成页改造进 scaffold：取数改 SDK 只读、写按钮改宿主浮层/nav、外站显示资源打包、去 pushState），改造完再继续本节其余步骤。
 
 把本 skill 的 `assets/scaffold/` 目录复制成创作者项目，然后：
-- **不再有 `__TOPIC_UUID__` 占位符**：上线脚本从 `.env` 读 `NIETA_ACTIVITY_UUID`，OSS base / prefix 由 `GET /v1/oss/upload-grant` 实时返回并注入，无需任何全局替换。
-- `@talesofai/topic-sdk` 在 `package.json` 里是 **git 依赖**（`git+https://github.com/talesofai/topic-sdk.git`，组织内私有仓库；`pnpm install` 时 clone 仓库并直接使用其中已提交的预构建 `dist/`，**无构建脚本、零摩擦**，需对该仓库有访问权）。**不发 npm。** 上传用公共 npmjs 的 `ali-oss`（直接 `import`，因 CLI 不支持 stsToken）。
-  - **若 `pnpm install` 报 `repository not found` / 卡在认证**：是 GitHub 访问权没配好——见 `references/onboarding.md` A1，让管理员把用户加进 `talesofai` org（或给该仓库 read 权）、配好 git 凭据后重试。这是平台侧一次性配置，不要让用户在这里纠结。
-- `cp .env.example .env` 并填入 `NIETA_API_TOKEN`（本人 bearer）+ `NIETA_ACTIVITY_UUID` + `NIETA_API_BASE`（`.env` 不提交）。
-- `pnpm install`。
+- **不再有 `__TOPIC_UUID__` 占位符**：OSS base / prefix 由内部团队发布时实时从后端取回并注入，创作者侧无需任何全局替换。
+- `@talesofai/topic-sdk` 在 `package.json` 里是 **git 依赖**（`git+https://github.com/talesofai/topic-sdk.git`）。仓库是**公开仓库**，`pnpm install` 时 clone 仓库并直接使用其中已提交的预构建 `dist/`，**无构建脚本、零摩擦**，任何人免认证可装，无需 GitHub 特殊权限。**不发 npm。**
+- `pnpm install`（同时安装 `ali-oss` 等发布依赖）。
 
-**校验门**：`pnpm install` 成功；`.env` 三个变量已填且非占位符。
+**校验门**：`pnpm install` 成功；Node >= 18、pnpm >= 8。
 
 ## 3. 初始化 SDK + 三态降级（见 `assets/scaffold/src/sdk.ts`）
 
@@ -102,26 +87,82 @@ description: >-
 
 ## 6. 自测（三上下文逐项过 `references/compliance.md` 的"功能自测"段）
 
-iOS 真机 / Android 真机 / Web（内嵌 + 游客裸链）三套都要过。重点：token 3s 内到、可空字段不崩、返回键正常（禁 pushState）、宿主分享浮层可见而页面无法调 `overlay.*`、游客写动作唤起 App。
+在本地 `pnpm dev` 预览下进行自测。重点：token 3s 内到、可空字段不崩、返回键正常（禁 pushState）、宿主分享浮层可见而页面无法调 `overlay.*`、游客写动作唤起 App。
 
-## 7. 构建 + 两段式上传（CSP）
+> **注意**：本地 dev 预览无法拿到真实 embed token、真桥接和真 `/v1/embed` 数据（guest/静态预览只能看空壳）。要在真机 embed 上下文调试，需完成 §7 dev 发布后，用开发者菜单切版本。
 
-`pnpm publish`（= `node scripts/deploy.mjs`，见 `assets/scaffold/package.json`）。脚本按序：
-1. **upload-grant**：调 `GET /v1/oss/upload-grant?purpose=topic_embed_page&activity_uuid=<uuid>`（Bearer `NIETA_API_TOKEN`），拿到 `version` + 临时 STS + `prefix` + `base_url`。**打印 `version`**。
-2. **build（base 注入）**：把 `base_url` 写入 `VITE_OSS_BASE` 后 `pnpm vite build`，产物里资产引用即指向 `sts/topic-embed/<uuid>/<version>/`，无占位符。
-3. **本地预检**：确认 `dist/index.html` 存在（否则 publish 会被服务端 400 `missing index.html`）。
-4. **两段式上传**（`ali-oss`，带 `stsToken`）：
-   - **资产**（非 HTML）：长缓存 `Cache-Control: max-age=31536000`。
-   - **HTML**：禁缓存 `no-cache,no-store,must-revalidate` + 由**上传时的对象 header** 注入 CSP（**不能**让 HTML 内 `<meta>` 自设 CSP，那不可信）。CSP 串见 `assets/scaffold/scripts/deploy.mjs`。
-5. **publish（发布即绑定）**：调 `POST /v1/topic-embed/activities/<uuid>/embed-page/publish` 体 `{version}`；服务端校验 prefix/index.html 存在后激活并绑定话题，返回 `{enabled, active_version, versions, updated_at}`。
+**校验门**：三上下文（app/web-embedded/guest）下核心路径通过；compliance.md 功能自测段逐项确认。
 
-预检不上线：`pnpm deploy:dry`（= `--dry-run`，跑 grant + build + 本地校验，跳过上传/publish）。
+## 7. dev 发布（发草稿 + 在 app 真实上下文调试）
 
-**校验门**：upload-grant 返回的 `version` 已打印；dist 产出且含 `index.html`；publish 成功后 `active_version` 与该 `version` 一致（脚本会断言）；CSP 串完整。
+本地 dev 预览无法模拟真实 embed 上下文（真 token、桥接、数据）。要做真机调试，需把页面发成**草稿**（不上线），然后在 app 内用开发者菜单挑版本挂载。
 
-## 8. 上线前合规门（必须）
+### 7.1 获取 dev 令牌（一次性，7 天有效）
 
-逐项过 `references/compliance.md`。**任一项不过都不许上线**，停下来报告给用户。
+1. 用**创作者自己的账号**登录 nieta-app。
+2. 进入「账号设置 → 话题页开发者令牌」，点「生成开发令牌」。
+3. 平台调用 `POST /v1/topic-embed/dev-publish-token`（正常登录态），返回 `{ token, expires_at }`（TTL 7 天）。
+4. 复制令牌。
+
+> **令牌安全说明**：这是平台签发的 **scoped dev 令牌**（`token_type='topic_dev_publish'`），与用户完整登录态（`x-token`）、embed token 三向隔离。泄露影响：只能对创作者自己有权限的话题发草稿，不能上线、不能做其它用户操作。令牌过期后重新生成。
+
+### 7.2 配置 .env
+
+把脚手架根目录的 `.env.example` 复制成 `.env`，填入：
+
+```bash
+NIETA_DEV_PUBLISH_TOKEN=<上一步复制的 dev 令牌>
+NIETA_ACTIVITY_UUID=<话题的 activity_uuid>
+NIETA_API_BASE=https://api.talesofai.cn
+```
+
+`.env` 不要提交 git。
+
+### 7.3 发草稿（dev）
+
+```bash
+pnpm deploy:dev
+# 等价于：node scripts/deploy.mjs --target dev
+```
+
+脚本流程：
+1. 用 dev 令牌（`x-dev-publish-token` 头）调 `upload-grant` 拿临时 STS。
+2. `vite build`（注入 `VITE_OSS_BASE`）。
+3. 上传 dist/ 到 OSS。
+4. `POST .../embed-page/publish` body `{ version, target: "dev" }` — **不激活 activeVersion，草稿不上线**。
+5. 打印版本号，提示在 app 内开发者菜单选版本。
+
+**校验门**：脚本完成并打印草稿版本号（如 `version=3`）；话题页公众侧无变化（草稿不对外挂载）。
+
+### 7.4 在 app 内调试（真实 embed 上下文）
+
+打开 app → 进入该话题页 → 点右上角**「⋯」→「开发者菜单」**：
+- 菜单由宿主 gating：调 `GET .../embed-page/versions` 时返回 200（创作者有权）才显示，公众用户完全不可见。
+- 列出所有版本（草稿/active 标注），选择你刚发的版本 → 宿主把 iframe 重挂到该草稿 URL，仍走真实 embed 上下文（真 token、真桥接、真 `/v1/embed` 数据）。
+- 也可直链调试：`/tag?hashtag=<X>&embedPreview=<版本号>`（有授权才生效）。
+
+### 7.5 反复迭代
+
+修改代码后重跑 `pnpm deploy:dev` → app 开发者菜单选新版本 → 验证 → 循环，直到满意。
+
+### 7.6 请内部上线
+
+调试满意后，将项目源码（不含 `node_modules/`、`dist/`）交给内部团队。内部团队用 `skill-internal-publish/` 里的流程（`pnpm deploy:prod`）完成上线。
+
+> **创作者只能 dev（发草稿），永不能 prod（上线）。**
+> 后端 `target=prod` / `activate` / `unbind` 仅接受 `is_internal` 完整登录态，scoped dev 令牌请求时直接被拒（403）。
+
+## 8. 合规门（上线前必须，由创作者在交付前过）
+
+逐项过 `references/compliance.md`。**任一项不过都不许交付**，停下来报告给用户。
+
+---
+
+## 交付
+
+创作者产出：**一个能本地 `pnpm dev` 预览 + `pnpm deploy:dev` 已发草稿 + 通过合规自测的项目**。
+
+交付方式：将项目源码（不含 `node_modules/`、不含 `dist/`）打包或推送 git 仓库，**交给内部团队**。内部团队会用 `skill-internal-publish/` 里的发布流程完成最终上线。
 
 ---
 
