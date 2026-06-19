@@ -774,6 +774,24 @@ function installLinkInterceptor(nav) {
   document.addEventListener("click", onClick, true);
   return () => document.removeEventListener("click", onClick, true);
 }
+function installPushStateGuard() {
+  if (typeof history === "undefined")
+    return () => {
+    };
+  const origPush = history.pushState.bind(history);
+  const origReplace = history.replaceState.bind(history);
+  const guard = (method) => () => {
+    const msg = `[topic-sdk] \u5185\u5D4C\u9875\u7981\u6B62 history.${method}(\u4F1A\u6C61\u67D3 App \u8FD4\u56DE\u6808);\u8BF7\u6539\u7528 hash \u8DEF\u7531(location.hash)\u6216\u5185\u5B58\u8DEF\u7531\u505A\u9875\u9762\u5185\u89C6\u56FE\u5207\u6362\u3002`;
+    console.error(msg);
+    throw new Error(msg);
+  };
+  history.pushState = guard("pushState");
+  history.replaceState = guard("replaceState");
+  return () => {
+    history.pushState = origPush;
+    history.replaceState = origReplace;
+  };
+}
 async function createTopicSDK(options = {}) {
   const {
     apiBaseUrl = "https://pre.api.talesofai.cn",
@@ -782,13 +800,22 @@ async function createTopicSDK(options = {}) {
     tokenRefreshEarlyMs = 5 * 60 * 1e3,
     onAuthLost
   } = options;
-  const bridge = new BridgeClient(tokenTimeout);
+  let effectiveTokenTimeout = tokenTimeout;
+  if (effectiveTokenTimeout < 1e3) {
+    console.warn(
+      `[topic-sdk] tokenTimeout ${effectiveTokenTimeout}ms \u4F4E\u4E8E\u4E0B\u9650 1000ms(500ms \u662F v1 bridge \u5DF2\u77E5\u574F\u503C),\u5DF2\u4E0A\u8C03\u5230 1000ms\u3002`
+    );
+    effectiveTokenTimeout = 1e3;
+  }
+  const bridge = new BridgeClient(effectiveTokenTimeout);
   const env = await detectEnv(bridge, SDK_VERSION, helloTimeout);
+  const removePushStateGuard = env.embedded ? installPushStateGuard() : () => {
+  };
   const activeBridge = env.context === "guest" ? null : bridge;
   if (env.context === "guest") {
     bridge.destroy();
   }
-  const auth = new SDKAuthImpl(activeBridge, tokenTimeout, tokenRefreshEarlyMs, onAuthLost);
+  const auth = new SDKAuthImpl(activeBridge, effectiveTokenTimeout, tokenRefreshEarlyMs, onAuthLost);
   await auth.init();
   const capabilities = buildCapabilities(env);
   const eventsImpl = new SDKEventsImpl(activeBridge);
@@ -825,6 +852,7 @@ async function createTopicSDK(options = {}) {
     },
     destroy() {
       removeLinkInterceptor();
+      removePushStateGuard();
       auth.destroy();
       eventsImpl.destroy();
       activeBridge?.destroy();

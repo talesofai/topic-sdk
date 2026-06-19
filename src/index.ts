@@ -101,6 +101,29 @@ function installLinkInterceptor(nav: SDKNavImpl): () => void {
 }
 
 /**
+ * 守卫 history.pushState/replaceState。内嵌页禁用(会污染 Android WebView 返回栈,返回键先消费 iframe history),
+ * 应改用 hash 路由 / 内存路由。embedded 下安装,违例当场 throw(dev 期即暴露);destroy 恢复原函数。
+ */
+function installPushStateGuard(): () => void {
+  if (typeof history === "undefined") return () => {};
+  const origPush = history.pushState.bind(history);
+  const origReplace = history.replaceState.bind(history);
+  const guard = (method: string) => () => {
+    const msg =
+      `[topic-sdk] 内嵌页禁止 history.${method}(会污染 App 返回栈);` +
+      `请改用 hash 路由(location.hash)或内存路由做页面内视图切换。`;
+    console.error(msg);
+    throw new Error(msg);
+  };
+  history.pushState = guard("pushState") as typeof history.pushState;
+  history.replaceState = guard("replaceState") as typeof history.replaceState;
+  return () => {
+    history.pushState = origPush;
+    history.replaceState = origReplace;
+  };
+}
+
+/**
  * 初始化并返回 TopicSDK 实例。
  *
  * 初始化序列：
@@ -119,10 +142,22 @@ export async function createTopicSDK(options: TopicSDKOptions = {}): Promise<Top
     onAuthLost,
   } = options;
 
+  // tokenTimeout 下界 clamp:500ms 是 v1 bridge 已知坏值;低于 1000ms 上调并告警(SKILL 固定 3000)。
+  let effectiveTokenTimeout = tokenTimeout;
+  if (effectiveTokenTimeout < 1000) {
+    console.warn(
+      `[topic-sdk] tokenTimeout ${effectiveTokenTimeout}ms 低于下限 1000ms(500ms 是 v1 bridge 已知坏值),已上调到 1000ms。`,
+    );
+    effectiveTokenTimeout = 1000;
+  }
+
   // ① + ② 端探测 + hello 握手
   // BridgeClient は常に作成するが、guest の場合はすぐ破棄する
-  const bridge = new BridgeClient(tokenTimeout);
+  const bridge = new BridgeClient(effectiveTokenTimeout);
   const env = await detectEnv(bridge, SDK_VERSION, helloTimeout);
+
+  // embedded 上下文:守卫 history.pushState/replaceState(内嵌页禁用,会污染 App 返回栈);违例当场 throw,dev 期即暴露。
+  const removePushStateGuard = env.embedded ? installPushStateGuard() : () => {};
 
   // guest の場合は bridge を使わない
   const activeBridge = env.context === "guest" ? null : bridge;
@@ -133,7 +168,7 @@ export async function createTopicSDK(options: TopicSDKOptions = {}): Promise<Top
   }
 
   // ③ 鉴权
-  const auth = new SDKAuthImpl(activeBridge, tokenTimeout, tokenRefreshEarlyMs, onAuthLost);
+  const auth = new SDKAuthImpl(activeBridge, effectiveTokenTimeout, tokenRefreshEarlyMs, onAuthLost);
   await auth.init();
 
   // ④ 能力协商
@@ -188,6 +223,7 @@ export async function createTopicSDK(options: TopicSDKOptions = {}): Promise<Top
 
     destroy(): void {
       removeLinkInterceptor();
+      removePushStateGuard();
       auth.destroy();
       eventsImpl.destroy();
       activeBridge?.destroy();
