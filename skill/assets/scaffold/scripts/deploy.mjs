@@ -170,6 +170,68 @@ function collectDistFiles() {
   return out;
 }
 
+/** 收集页面源码（src/ 递归 + 根 index.html）；不含 node_modules/dist/scripts/config，避免误扫第三方库与脚本自身。 */
+function collectPageSourceFiles() {
+  const out = [];
+  const rootHtml = join(PROJECT_ROOT, "index.html");
+  if (existsSync(rootHtml)) out.push({ relKey: "index.html", fullPath: rootHtml });
+  const srcDir = join(PROJECT_ROOT, "src");
+  if (existsSync(srcDir) && statSync(srcDir).isDirectory()) {
+    const walk = (dir) => {
+      for (const name of readdirSync(dir)) {
+        const full = join(dir, name);
+        if (statSync(full).isDirectory()) walk(full);
+        else out.push({ relKey: relative(PROJECT_ROOT, full).split(sep).join("/"), fullPath: full });
+      }
+    };
+    walk(srcDir);
+  }
+  return out.filter((f) => /\.(m?[jt]sx?|cjs|html|css)$/i.test(f.relKey));
+}
+
+/**
+ * 发布前源码合规扫描：把 compliance.md 中"靠 agent 自觉"的硬红线变成机器 fail-fast，违例当场打回 agent。
+ * 只扫页面源码（创作者代码），不扫 node_modules（第三方库）/脚本/配置，避免误报。
+ * 确系合法的同源用途，可在该行加注释 sdk-compliance-ok 豁免（需内部 review）。
+ */
+function scanPageSourceForViolations() {
+  const RULES = [
+    { re: /localStorage\s*[.[]|sessionStorage\s*[.[]/, msg: "禁止 localStorage/sessionStorage（embed token 只存内存，用 sdk.auth.getToken()；compliance §A）" },
+    { re: /document\.cookie\s*=/, msg: "禁止写 cookie 存 token（compliance §A）" },
+    { re: /history\s*\.\s*(pushState|replaceState)\s*\(/, msg: "禁止 history.pushState/replaceState（污染 App 返回栈）；改用 hash/内存路由" },
+    { re: /navigator\s*\.\s*serviceWorker\s*\.\s*register\s*\(/, msg: "禁止 ServiceWorker（跨域 sandbox iframe 内无效，只污染控制台）" },
+    { re: /method\s*:\s*['"](?:POST|PUT|DELETE|PATCH)['"]/i, msg: "禁止写接口调用（POST/PUT/DELETE/PATCH）；内嵌页只读，写动作走 sdk.nav.internal 跳原生页" },
+    { re: /\bnew\s+EventSource\s*\(/, msg: "禁止 EventSource；数据走 sdk.* 只读接口" },
+    { re: /window\s*\.\s*parent\s*\.\s*postMessage\s*\(/, msg: "禁止直接 window.parent.postMessage；只经 SDK bridge 通信" },
+    { re: /<meta[^>]+http-equiv\s*=\s*["']?\s*content-security-policy/i, msg: "禁止页面自设 CSP <meta>（与上传注入的对象头取交集会白屏）；CSP 由 deploy 注入" },
+    { re: /location\s*\.\s*(href|assign|replace)\b[^;\n]*(\/oauth|\/login|\/authorize|\/callback)/i, msg: "禁止 OAuth/登录跳转残留；登录由宿主处理，游客用 sdk.guest.openApp" },
+  ];
+  const OSS_RE = /oss\.talesofai\.cn/;
+  const OSS_VISIBLE_RE = /<a[\s>]|href\s*=|textContent|innerHTML|innerText/;
+  const violations = [];
+  for (const f of collectPageSourceFiles()) {
+    const lines = readFileSync(f.fullPath, "utf8").split(/\r?\n/);
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.includes("sdk-compliance-ok")) continue;
+      for (const { re, msg } of RULES) {
+        if (re.test(line)) violations.push(`${f.relKey}:${i + 1} ${msg}`);
+      }
+      if (OSS_RE.test(line) && OSS_VISIBLE_RE.test(line)) {
+        violations.push(`${f.relKey}:${i + 1} oss.talesofai.cn 出现在可见引用（<a>/文案）；对外身份须用 app.nieta.art/tag?hashtag=X`);
+      }
+    }
+  }
+  if (violations.length) {
+    fail(
+      `源码合规扫描未通过（发布前硬门，机器检出的红线违例）：\n  - ` +
+        violations.join("\n  - ") +
+        `\n请修正后重跑。确系合法同源用途的个别行可在行内加注释 sdk-compliance-ok 豁免（需内部 review）。`,
+    );
+  }
+  info("源码合规扫描通过。");
+}
+
 /** 并发上限执行（缩短 1h STS 窗口内的串行耗时）。 */
 async function mapLimit(items, limit, fn) {
   let idx = 0;
@@ -184,6 +246,19 @@ async function mapLimit(items, limit, fn) {
 
 async function main() {
   info(`发布模式：--target ${TARGET}${DRY_RUN ? " --dry-run" : ""}`);
+
+  // 前置安全/环境检查
+  if (Number(process.versions.node.split(".")[0]) < 18) {
+    fail(`需要 Node >= 18（当前 ${process.version}）；deploy 依赖全局 fetch。`);
+  }
+  try {
+    const tracked = execSync("git ls-files .env", { cwd: PROJECT_ROOT, encoding: "utf8" }).trim();
+    if (tracked) {
+      fail(".env 已被 git 追踪，凭据有泄露风险。请先 `git rm --cached .env`、确保 .gitignore 含 .env 后重试。");
+    }
+  } catch {
+    // git 不可用 / 非 git 仓库：跳过该绊网（.gitignore 仍是主防线）
+  }
 
   const env = loadEnv();
   const { activityUuid, apiBase } = env;
@@ -240,7 +315,14 @@ async function main() {
   info(`grant 通过：version=${version}，prefix=${prefix}`);
   info(`base_url=${base_url}，bucket=${bucket}`);
 
-  // 2) build（把 base_url 注入 VITE_OSS_BASE）
+  // 1b) 源码合规扫描（红线 fail-fast：把 compliance.md 里靠 agent 自觉的项变成发布前硬门，违例当场打回 agent）
+  scanPageSourceForViolations();
+
+  // 2a) 类型门：先跑 tsc（deploy 原本直接 vite build 绕过 tsc，导致可空字段裸用 / 不存在字段 / strict 降级全漏过）
+  info("执行 tsc --noEmit（类型门）...");
+  execSync("pnpm exec tsc --noEmit", { cwd: PROJECT_ROOT, stdio: "inherit" });
+
+  // 2b) build（把 base_url 注入 VITE_OSS_BASE）
   info("执行 vite build（base 注入 VITE_OSS_BASE）...");
   execSync("pnpm exec vite build", {
     cwd: PROJECT_ROOT,
@@ -266,6 +348,14 @@ async function main() {
       fail(`文件超过大小上限（${max_file_size} 字节）：${f.relKey}（${f.size} 字节）`);
     }
   }
+  const extraHtml = files
+    .filter((f) => f.relKey.toLowerCase().endsWith(".html"))
+    .map((f) => f.relKey)
+    .filter((k) => k !== ENTRY);
+  if (extraHtml.length) {
+    fail(`dist/ 多 HTML 入口：${extraHtml.join(", ")}；内嵌页须合并为单页（唯一入口 ${ENTRY}），其余 .html 公众永不可达。`);
+  }
+
   if (files.length > FILE_COUNT_WARN_THRESHOLD) {
     info(
       `警告：文件数 ${files.length} 较多，STS 凭证有效期仅 1 小时，` +
