@@ -699,6 +699,49 @@ var SDKUiImpl = class {
 
 // src/index.ts
 var SDK_VERSION = "0.1.0";
+function installLinkInterceptor(nav) {
+  const onClick = (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
+      return;
+    const targetEl = e.target instanceof Element ? e.target : e.target?.parentElement ?? null;
+    const a = targetEl?.closest("a");
+    if (!a)
+      return;
+    const href = a.getAttribute("href");
+    if (!href)
+      return;
+    const target = a.getAttribute("target");
+    if (target && target !== "_self")
+      return;
+    if (a.hasAttribute("download"))
+      return;
+    let url;
+    try {
+      url = new URL(href, location.href);
+    } catch {
+      return;
+    }
+    if (url.protocol !== "http:" && url.protocol !== "https:")
+      return;
+    if (url.origin === location.origin) {
+      if (url.pathname === location.pathname && url.search === location.search && url.hash)
+        return;
+      const query = {};
+      url.searchParams.forEach((v, k) => {
+        query[k] = v;
+      });
+      e.preventDefault();
+      nav.internal(url.pathname, query).catch(() => {
+      });
+      return;
+    }
+    e.preventDefault();
+    nav.external(url.href).catch(() => {
+    });
+  };
+  document.addEventListener("click", onClick, true);
+  return () => document.removeEventListener("click", onClick, true);
+}
 async function createTopicSDK(options = {}) {
   const {
     apiBaseUrl = "https://pre.api.talesofai.cn",
@@ -728,6 +771,7 @@ async function createTopicSDK(options = {}) {
   const navImpl = new SDKNavImpl(activeBridge, env.context);
   const uiImpl = new SDKUiImpl(activeBridge, env.context);
   const guestImpl = new GuestOpenAppImpl();
+  const removeLinkInterceptor = installLinkInterceptor(navImpl);
   const sdk = {
     env: {
       context: env.context,
@@ -748,6 +792,7 @@ async function createTopicSDK(options = {}) {
       return capabilities.has(cap);
     },
     destroy() {
+      removeLinkInterceptor();
       auth.destroy();
       eventsImpl.destroy();
       activeBridge?.destroy();

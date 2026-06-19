@@ -5,7 +5,7 @@ import { buildCapabilities, detectEnv } from "./env.js";
 import { SDKEventsImpl } from "./events.js";
 import { GuestOpenAppImpl } from "./guest.js";
 import { SDKNavImpl } from "./nav.js";
-import type { Capability, SDKAuth, TopicSDK, TopicSDKOptions } from "./types.js";
+import type { AllowedRoute, Capability, SDKAuth, TopicSDK, TopicSDKOptions } from "./types.js";
 import { SDKUiImpl } from "./ui.js";
 
 export type {
@@ -55,6 +55,50 @@ export { BridgeError, TopicApiError, UnsupportedError } from "./errors.js";
 export { Capability } from "./types.js";
 
 const SDK_VERSION = "0.1.0";
+
+/**
+ * 全局拦截 <a> 点击。内嵌页跑在 sandbox iframe(无 allow-top-navigation)里,原生 <a>/相对路径跳转会逃逸到
+ * iframe 自身源(OSS)而非宿主 App。故在捕获阶段接管:
+ *  - 同源路径跳转 → nav.internal(命中 AllowedRoute 由宿主导航/游客转深链;未命中被宿主拦截、不逃逸);
+ *  - 跨站外链 → nav.external(宿主用系统浏览器打开);
+ *  - 同 path 仅改 hash(页面内视图切换)、target=_blank、download、非 http(s) scheme → 放行。
+ * 这样创作者即便写了原生链接,也不会把 iframe 跳出内嵌页。返回卸载函数。
+ */
+function installLinkInterceptor(nav: SDKNavImpl): () => void {
+  const onClick = (e: MouseEvent) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const targetEl = e.target instanceof Element ? e.target : ((e.target as Node | null)?.parentElement ?? null);
+    const a = targetEl?.closest("a") as HTMLAnchorElement | null;
+    if (!a) return;
+    const href = a.getAttribute("href");
+    if (!href) return;
+    const target = a.getAttribute("target");
+    if (target && target !== "_self") return;
+    if (a.hasAttribute("download")) return;
+    let url: URL;
+    try {
+      url = new URL(href, location.href);
+    } catch {
+      return;
+    }
+    if (url.protocol !== "http:" && url.protocol !== "https:") return;
+    if (url.origin === location.origin) {
+      // 同 path 仅改 hash(页面内视图切换)→ 放行,交给页面自己处理
+      if (url.pathname === location.pathname && url.search === location.search && url.hash) return;
+      const query: Record<string, string> = {};
+      url.searchParams.forEach((v, k) => {
+        query[k] = v;
+      });
+      e.preventDefault();
+      nav.internal(url.pathname as AllowedRoute, query).catch(() => {});
+      return;
+    }
+    e.preventDefault();
+    nav.external(url.href).catch(() => {});
+  };
+  document.addEventListener("click", onClick, true);
+  return () => document.removeEventListener("click", onClick, true);
+}
 
 /**
  * 初始化并返回 TopicSDK 实例。
@@ -116,6 +160,9 @@ export async function createTopicSDK(options: TopicSDKOptions = {}): Promise<Top
   const uiImpl = new SDKUiImpl(activeBridge, env.context);
   const guestImpl = new GuestOpenAppImpl();
 
+  // 根治"原生 <a>/相对跳转在 sandbox iframe 内逃逸到 OSS 源"的问题:全局接管 <a> 点击,改走 bridge 导航。
+  const removeLinkInterceptor = installLinkInterceptor(navImpl);
+
   // ————— TopicSDK 对象 —————
   const sdk: TopicSDK = {
     env: {
@@ -140,6 +187,7 @@ export async function createTopicSDK(options: TopicSDKOptions = {}): Promise<Top
     },
 
     destroy(): void {
+      removeLinkInterceptor();
       auth.destroy();
       eventsImpl.destroy();
       activeBridge?.destroy();
