@@ -67,15 +67,28 @@ function info(msg) {
   console.log(`[deploy] ${msg}`);
 }
 
-/** 按运行期真实 host 派生 CSP，避免写死 .cn 而在 .com/global region 自我拦截白屏。 */
-function buildHtmlCsp(apiBase, baseUrl) {
+/** 按运行期真实 host 派生 CSP，避免写死 .cn 而在 .com/global region 自我拦截白屏。
+ *  cspAllow：后端 redis 在线托管、随 upload-grant 下发的外站白名单（按 directive 分），追加到对应指令。 */
+function buildHtmlCsp(apiBase, baseUrl, cspAllow = {}) {
   const apiHost = new URL(apiBase).host;
   const ossHost = new URL(baseUrl).host;
   const appOrigin = apiBase.includes("talesofai.com") ? "app.neta.art" : "app.nieta.art";
+  // 把白名单某 directive 的域名规范成 https://host 形式并拼到既有指令后
+  const withAllow = (directive, base) => {
+    const extra = (cspAllow?.[directive] || [])
+      .map((d) => String(d).trim())
+      .filter(Boolean)
+      .map((d) => (/^https?:\/\//.test(d) ? d : `https://${d}`))
+      .join(" ");
+    return extra ? `${base} ${extra}` : base;
+  };
   return (
-    "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; " +
-    `img-src 'self' https://${ossHost}; media-src 'self' https://${ossHost}; ` +
-    `font-src 'self'; connect-src 'self' https://${apiHost}; ` +
+    `default-src 'none'; ${withAllow("script-src", "script-src 'self' 'unsafe-inline'")}; ` +
+    `${withAllow("style-src", "style-src 'self' 'unsafe-inline'")}; ` +
+    `${withAllow("img-src", `img-src 'self' https://${ossHost}`)}; ` +
+    `${withAllow("media-src", `media-src 'self' https://${ossHost}`)}; ` +
+    `${withAllow("font-src", "font-src 'self'")}; ` +
+    `${withAllow("connect-src", `connect-src 'self' https://${apiHost}`)}; ` +
     `frame-ancestors https://${appOrigin} capacitor://${appOrigin}; upgrade-insecure-requests`
   );
 }
@@ -295,6 +308,7 @@ async function main() {
     endpoint: rawEndpoint,
     allowed_suffixes,
     max_file_size,
+    csp_allow,
   } = grant;
   if (
     typeof version !== "number" ||
@@ -387,7 +401,7 @@ async function main() {
     secure: true,
   });
 
-  const htmlCsp = buildHtmlCsp(apiBase, base_url);
+  const htmlCsp = buildHtmlCsp(apiBase, base_url, csp_allow);
   const isHtml = (relKey) => relKey.toLowerCase().endsWith(".html");
   const assets = files.filter((f) => !isHtml(f.relKey));
   const htmls = files.filter((f) => isHtml(f.relKey));

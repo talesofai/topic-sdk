@@ -85,13 +85,23 @@ description: >-
 
 **校验门**：所有 `nav.internal` 的 route 都在白名单内；游客态点"登录/点赞"等走 `openApp` 而非尝试本地写。
 
-## 6. 自测（三上下文逐项过 `references/compliance.md` 的"功能自测"段）
+## 6. 自测
 
-在本地 `pnpm dev` 预览下进行自测。重点：token 3s 内到、可空字段不崩、返回键正常（禁 pushState）、宿主分享浮层可见而页面无法调 `overlay.*`、游客写动作唤起 App。
+### 6.1 本地嵌入态自测（mock 宿主 harness，无需真 App）
 
-> **注意**：本地 dev 预览无法拿到真实 embed token、真桥接和真 `/v1/embed` 数据（guest/静态预览只能看空壳）。要在真机 embed 上下文调试，需完成 §7 dev 发布后，用开发者菜单切版本。
+`pnpm dev:host` 打开**本地 mock 宿主**（`dev-host/`）：它用与真宿主同款 sandbox iframe 嵌你的页面、并扮演 frame-bridge v2 宿主（回 hello、发/拒 token、收 `nav.internal`/`nav.external`、推 `tokenChanged`/`viewport`/`back`），右侧面板看所有桥消息。
 
-**校验门**：三上下文（app/web-embedded/guest）下核心路径通过；compliance.md 功能自测段逐项确认。
+→ 不依赖真 App、不依赖真人即可验：握手是否成功、`getEmbedToken` 流程、按钮点了走哪个 `nav.internal` route、`ui.toast`、事件响应、原生 `<a>` 跳转是否被 SDK 拦回（不逃逸 OSS）。
+
+面板「embedToken」留空 = 游客态（数据匿名）；填一个真 pre/prod embed token = 看带 `viewer` 的数据。
+
+> 局限：真机 iOS/Android WebView 三端差异、真实 token 与真 `/v1/embed` 鉴权数据，mock 宿主替代不了——那部分仍需 §7 在真 App 内验。
+
+### 6.2 普通本地预览
+
+`pnpm dev` 直开页面（无宿主 → guest 降级，看渲染 + 匿名数据）。重点：token 流程、可空字段不崩、返回键正常（禁 pushState）、游客写动作唤起 App。
+
+**校验门**：mock 宿主下核心路径（握手 / 数据 / 导航 / 事件）通过；`compliance.md` 功能自测段逐项确认。
 
 ## 7. dev 发布（发草稿 + 在 app 真实上下文调试）
 
@@ -152,9 +162,16 @@ pnpm deploy:dev
 > **创作者只能 dev（发草稿），永不能 prod（上线）。**
 > 后端 `target=prod` / `activate` / `unbind` 仅接受 `is_internal` 完整登录态，scoped dev 令牌请求时直接被拒（403）。
 
-## 8. 合规门（上线前必须，由创作者在交付前过）
+## 8. 合规门（上线前必须）
 
-逐项过 `references/compliance.md`。**任一项不过都不许交付**，停下来报告给用户。
+**多数红线已机器兜底**：`pnpm deploy:dev/prod` 会先跑 `tsc --noEmit`（类型门：可空字段裸用 / 不存在字段 / strict 降级）+ **源码红线扫描**（localStorage/sessionStorage/cookie、`history.pushState`、ServiceWorker、写方法 fetch、`EventSource`、`window.parent.postMessage`、自设 CSP `<meta>`、OSS 可见引用、OAuth 残留）+ 单 HTML 入口校验；命中直接 fail 打回。SDK 运行期还会拦原生 `<a>` 跳转（转 bridge）、守卫 `history.pushState`（embedded 即 throw）。**你不必靠记忆遵守这些——违反会在发布/运行时当场报错。**（确系合法的同源用途，可在该行加注释 `sdk-compliance-ok` 豁免，需内部 review。）
+
+仍需人工逐项过 `references/compliance.md` 的：三端真机自测（§F）、可空字段语义判空是否合理（类型门只保证不裸用）、文案 / 视觉。**任一不过不交付，停下来报告用户。**
+
+### 8.1 agent 自检（纯对话行为，机器拦不了，发布前自我 attest）
+
+- [ ] 全程**没向用户问技术决策**（CSP / 路由 / 缓存 / 字段名 / token / 依赖版本 / AllowedRoute 等）：这些要么已结构固化、要么由运营在线配，问了也改不了。标准不支持用户现成做法时，按 `references/migrate-existing-html.md` 默认处置，不回头问。
+- [ ] 向用户的提问都是**业务信息**（话题内容 / 跳转目的地 / activity_uuid），尽量一次问全、用大白话。
 
 ---
 

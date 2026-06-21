@@ -24,7 +24,7 @@
 - [ ] 所有**字体**打包内联或来自 `oss.talesofai.cn`，不引 Google Fonts 等外站。
 - [ ] 所有 **CSS** 打包内联，无 `<link rel="stylesheet" href="外站">`。
 - [ ] **禁止 base64 / `data:` URI 嵌入媒体**（图片/视频/音频）；小图标用内联 SVG 组件。
-- [ ] 如用外站 CDN 加载 **JS**，已向运营申请加入 `script-src` 名单；未引来源不明的第三方 JS（供应链风险）。
+- [ ] **外站 JS 一律打包进产物**（npm 依赖 / 本地文件），不写 `<script src="https://...">`、不动态 import 外站 URL；CSP `script-src 'self'` 运行期硬拦外站 JS。确需放行的已审批外站域名（script/connect/img…）由**运营在线白名单**（后端 redis `ops_config topic_embed/csp_allow`，按 directive 分）托管、随 `upload-grant` 下发、deploy 注入 CSP —— 创作者**无需也无法**自行"申请加名单"。
 
 ## E. 运行时约束
 - [ ] **禁用 `history.pushState`**；用 hash 路由（`createHashRouter`）或内存路由（`createMemoryRouter`）。
