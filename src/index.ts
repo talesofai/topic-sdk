@@ -3,7 +3,6 @@ import { BridgeClient } from "./bridge.js";
 import { SDKActivityImpl, SDKRankImpl, SDKTopicImpl } from "./data.js";
 import { buildCapabilities, detectEnv } from "./env.js";
 import { SDKEventsImpl } from "./events.js";
-import { GuestOpenAppImpl } from "./guest.js";
 import { SDKNavImpl } from "./nav.js";
 import type { AllowedRoute, Capability, SDKAuth, TopicSDK, TopicSDKOptions } from "./types.js";
 import { SDKUiImpl } from "./ui.js";
@@ -18,7 +17,6 @@ export type {
   // 环境/能力
   ClientContext,
   CreatorCard,
-  GuestOpenApp,
   HelloResult,
   HighlightPage,
   Leaderboard,
@@ -193,7 +191,6 @@ export async function createTopicSDK(options: TopicSDKOptions = {}): Promise<Top
   const rankImpl = new SDKRankImpl(apiBaseUrl, auth as SDKAuth);
   const navImpl = new SDKNavImpl(activeBridge, env.context);
   const uiImpl = new SDKUiImpl(activeBridge, env.context);
-  const guestImpl = new GuestOpenAppImpl();
 
   // 根治"原生 <a>/相对跳转在 sandbox iframe 内逃逸到 OSS 源"的问题:全局接管 <a> 点击,改走 bridge 导航。
   const removeLinkInterceptor = installLinkInterceptor(navImpl);
@@ -215,7 +212,6 @@ export async function createTopicSDK(options: TopicSDKOptions = {}): Promise<Top
     nav: navImpl,
     ui: uiImpl,
     events: eventsImpl,
-    guest: guestImpl,
 
     can(cap: Capability): boolean {
       return capabilities.has(cap);

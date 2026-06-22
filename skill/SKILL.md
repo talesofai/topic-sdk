@@ -77,13 +77,13 @@ description: >-
 
 **校验门**：`getDetail` + `listStories` 能渲染；对所有可空字段已判空（grep 一遍 `.uuid`/`.aspect`/`.startTime` 的使用点）。
 
-## 5. 导航 + 游客唤起 App
+## 5. 导航（唯一漏斗：nav.internal）
 
-- `sdk.nav.internal(route, query?)`：跳产品内页，`route` 必须在 AllowedRoute 白名单内（见 cheatsheet）。`guest` 上下文会自动转成唤起 App 深链。
+- `sdk.nav.internal(route, query?)`：跳产品内页，`route` 必须在 AllowedRoute 白名单内（见 cheatsheet）。**这是唯一的跳转/写意图漏斗**——没有 `sdk.guest.openApp`，唤起 App 由宿主承载（手机浏览器宿主自动唤起 App；原生 App 内站内跳；桌面站内跳）。
+- **参数契约**：自指路由（`/topic` `/tag` `/activity`）省略参数时 SDK 自动从当前页 URL 填；per-item 路由（`/oc` `/user` `/collection/interaction`）必须传 `uuid`（来自被点卡片）。**漏传/传错会被 SDK 拦下（构建期类型 + 运行期 throw），不会静默白屏**——详见 cheatsheet 参数表。
 - `sdk.nav.external(url)`：外跳（embedded 走 bridge；guest 走 `window.open`）。
-- 游客态写动作：用 `sdk.guest.openApp(route, query?)`（Universal Link 为主，微信/QQ 内置浏览器会弹原生 alert 引导）。
 
-**校验门**：所有 `nav.internal` 的 route 都在白名单内；游客态点"登录/点赞"等走 `openApp` 而非尝试本地写。
+**校验门**：所有 `nav.internal` 的 route 都在白名单内；写意图（点赞/关注/登录）一律走 `nav.internal` 跳原生页/由宿主唤起 App，**绝不在页面内尝试本地写**。
 
 ## 6. 自测
 

@@ -199,9 +199,6 @@ export enum Capability {
   EventBack = "event.back",
   EventTokenChanged = "event.tokenChanged",
   EventViewport = "event.viewport",
-
-  // 游客唤起（仅 guest）
-  OpenApp = "guest.openApp",
 }
 
 // ————— AllowedRoute 白名单 —————
@@ -323,9 +320,23 @@ export interface SDKRank {
 export interface SDKNav {
   /**
    * 跳进产品内页面（AllowedRoute v1 白名单）。
-   * 对 guest 上下文：转为 openApp(route, query) 深链。
+   *
+   * 参数契约按路由性质分两类（SDK 运行期兜底 + 此处类型收窄，缺参构建期/运行期都会被拦）：
+   * - **自指路由** `/topic` `/tag` `/activity`：参数=「当前这个」，可省略，SDK 自动从当前页
+   *   `?hashtag=` / `?activity_uuid=` 填入（创作者可显式覆盖）。`/ranking` `/generate` 无需参数。
+   * - **per-item 路由** `/oc` `/user` `/collection/interaction`：参数指向「具体某个」实体，
+   *   **必须传 `uuid`**（来自被点卡片的数据，SDK 无从代填）。
+   *
+   * guest 上下文（仅本地 dev 无宿主时）内部转 openApp 深链；生产入口恒为宿主内嵌，唤起 App 由宿主承载。
    */
-  internal(route: AllowedRoute, query?: Record<string, string | number>): Promise<void>;
+  internal(
+    route: "/topic" | "/tag" | "/activity" | "/ranking" | "/generate",
+    query?: Record<string, string | number>,
+  ): Promise<void>;
+  internal(
+    route: "/oc" | "/user" | "/collection/interaction",
+    query: { uuid: string | number } & Record<string, string | number>,
+  ): Promise<void>;
 
   /**
    * 跳外部 URL。
@@ -356,6 +367,10 @@ export interface SDKEvents {
   off(event: string, handler: (...args: unknown[]) => void): void;
 }
 
+/**
+ * SDK 内部用：guest 上下文（仅本地 dev 无宿主时可达）下 nav.internal 的深链兜底实现。
+ * **不**挂在公开的 `TopicSDK` 上——生产入口恒为宿主内嵌，创作者一律用 `sdk.nav.internal`，唤起 App 由宿主承载。
+ */
 export interface GuestOpenApp {
   openApp(route: AllowedRoute, query?: Record<string, string | number>): void;
 }
@@ -377,7 +392,6 @@ export interface TopicSDK {
   nav: SDKNav;
   ui: SDKUi;
   events: SDKEvents;
-  guest: GuestOpenApp;
   can(cap: Capability): boolean;
   destroy(): void;
 }

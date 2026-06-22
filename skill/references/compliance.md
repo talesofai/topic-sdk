@@ -36,8 +36,9 @@
 ## F. 三上下文功能自测（iOS 真机 / Android 真机 / Web 内嵌 + 游客裸链）
 - [ ] **iOS**：iframe 能加载；`sdk.env` 为 `embedded=true, client='ios'`；token 3s 内非 null；`getDetail`/`listStories` 正常；`nav.internal` 跳转正常；宿主 Navbar 与内容无重叠；底部安全区正确；宿主弹窗覆盖时页面能容忍；深链从 Safari 打开 `app.nieta.art/tag?hashtag=X` 落到 App 正确路由。
 - [ ] **Android**：同上前若干项；返回键**不**回退 iframe 内 history（已禁 pushState）；OSS 资产加载正常。
-- [ ] **Web 内嵌**：`embedded=true`，功能同上。
-- [ ] **Web 游客裸链**：`embedded=false`，匿名数据正常、`viewer` 为 null；写动作走 `sdk.guest.openApp` 唤起 App；微信/QQ 内置浏览器弹引导（非直接 scheme）。
+- [ ] **Web 内嵌（桌面浏览器）**：`embedded=true`，功能同上；写意图 `nav.internal` 站内跳转。
+- [ ] **Web 内嵌（手机浏览器，无论是否登录）**：`embedded=true`；写意图走 `sdk.nav.internal` → 宿主自动**唤起 App**（scheme + 商店兜底）；微信/QQ 内置浏览器由宿主弹引导（非直接 scheme）。
+- [ ] **本地 dev 裸链（guest）**：`pnpm dev` 无宿主 → `embedded=false`、`viewer=null`、匿名数据正常（**生产入口恒为宿主内嵌，OSS 裸链不对外暴露**，故 guest 仅 dev 可达）。
 
 ## G. 上传 / OSS
 - [ ] 两段式上传：资产长缓存、HTML 禁缓存 + 上传管线 `--headers` 注入 CSP（非 HTML `<meta>` 自设）。

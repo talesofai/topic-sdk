@@ -34,7 +34,7 @@
 - **判定**：页面有调用写接口的按钮/表单，或有登录/鉴权流程。
 - **结论**：需改造。写动作不能留在页面里。
   - 点赞/关注/收藏 → 改成 `sdk.nav.internal('/collection/interaction', {uuid})` 跳原生页。
-  - 分享/登录/举报 → 删掉页面里的实现，嵌入态由宿主固定浮层承载（无需页面做任何事）；游客态用 `sdk.guest.openApp(route, query)` 唤起 App。
+  - 分享/登录/举报 → 删掉页面里的实现，由宿主固定浮层承载（无需页面做任何事）；写意图统一走 `sdk.nav.internal`（手机浏览器宿主自动唤起 App，桌面/原生站内跳；没有 `guest.openApp`）。
   - 发布/评论/删除等写操作 → 整块删除，没有替代方案，见 §4 决策树条目 D2。
 - **改造动作**：§3.1 → §3.2 → §3.3 → §3.5(写按钮处理) → §3.6。
 
@@ -235,18 +235,17 @@ leaderboard.endTime     → 同上
 ```typescript
 // 跳到原生作品/OC 详情页，在那里完成写操作
 sdk.nav.internal('/collection/interaction', { uuid: storyId })
-  .catch(() => {}); // 游客态自动转 openApp 深链
+  .catch(() => {}); // 嵌入态宿主导航；手机浏览器宿主自动唤起 App；guest（本地 dev）内部转深链
 ```
 
 **分享按钮：**
 删除整个按钮及实现。嵌入态的分享由宿主固定浮层提供（顶部导航栏的分享图标），页面不需要也不能触发。游客态无分享按钮；若原来有分享链接，确保分享的链接是 `app.nieta.art/tag?hashtag=X`，不是 OSS URL。
 
 **登录按钮：**
-删除原来的登录流程（`localStorage` token、OAuth 跳转等）。嵌入态登录由宿主处理；游客态：
+删除原来的登录流程（`localStorage` token、OAuth 跳转等）。登录由宿主承载——嵌入态走宿主固定浮层，页面不做任何事。若确需"去 App 登录"入口：
 ```typescript
-if (!sdk.env.embedded) {
-  sdk.guest.openApp('/tag', { hashtag }); // 唤起 App 再登录
-}
+// hashtag 由 SDK 自动填；手机浏览器宿主会唤起 App，本地 dev guest 同样唤起
+void sdk.nav.internal('/tag').catch(() => {});
 ```
 
 **发布/评论/删除等其他写操作：**
@@ -255,7 +254,7 @@ if (!sdk.env.embedded) {
 **`alert`/自绘弹窗：**
 改为 `sdk.ui.toast(text, { level: 'info' })`（仅嵌入态有效，guest 态会抛 `UnsupportedError`；toast 调用前加 `sdk.env.embedded` 判断，guest 降级用 `console.log` 或不提示）。
 
-**自检**：grep `fetch\|XMLHttpRequest\|\.ajax\|localStorage\|sessionStorage\|cookie\|history\.pushState\|overlay\.\|\.pushState` 均无命中（`history.pushState` 已删，token 不落存储）。所有写意图按钮要么改为 `nav.internal`，要么改为 `guest.openApp`，要么删除。
+**自检**：grep `fetch\|XMLHttpRequest\|\.ajax\|localStorage\|sessionStorage\|cookie\|history\.pushState\|overlay\.\|\.pushState` 均无命中（`history.pushState` 已删，token 不落存储）。所有写意图按钮要么改为 `nav.internal`，要么删除（没有 `guest.openApp`）。
 
 ---
 
@@ -273,15 +272,14 @@ const isAuthenticated = sdk.auth.isAuthenticated(); // 有 embed token
 // 数据加载：所有接口匿名也能调（viewer 为 null）
 // viewer 为 null 时：不展示"已订阅"状态、不展示个性化数据
 
-// 游客态写意图统一走 openApp
-function handleWriteIntent(route: AllowedRoute, query?: Record<string, string | number>) {
-  if (isGuest) {
-    sdk.guest.openApp(route, query);
-  } else {
-    // 嵌入态：宿主浮层处理，页面不做任何事（或 toast 引导）
-    sdk.ui.toast('请使用顶部入口', { level: 'info' }).catch(() => {});
-  }
-}
+// 写意图统一走 nav.internal（唯一漏斗，按钮处用字面 route）：
+//   per-item 路由必传 uuid（来自被点卡片）；自指路由 /topic /tag /activity 参数可省（SDK 自动填）。
+//   guest（仅本地 dev 无宿主）内部转唤起 App；嵌入态由宿主承载（手机浏览器唤起 App / 桌面站内跳）。
+const onLikeClick = (story: StoryCard) =>
+  void sdk.nav.internal('/collection/interaction', { uuid: story.storyId }).catch(() => {});
+const onAuthorClick = (creator: CreatorCard) =>
+  void sdk.nav.internal('/user', { uuid: creator.uuid }).catch(() => {});
+// 登录/分享/举报：删除页面实现，由宿主固定浮层承载，页面不做任何事。
 ```
 
 **safeBottom + 键盘 inset 处理**（如果页面有底部固定按钮/输入框）：
@@ -442,7 +440,7 @@ function navigate(view: string) { currentView = view; renderView(); }
 |---|---|
 | §3 | 验证 SDK 初始化：三态降级、`tokenTimeout`、`onAuthLost` 降级匿名 |
 | §4 | 验证数据渲染：`getDetail`/`listStories` 成功，可空字段均判空 |
-| §5 | 验证导航：所有 `nav.internal` 的 route 在 AllowedRoute 白名单内；游客写意图走 `openApp` |
+| §5 | 验证导航：所有 `nav.internal` 的 route 在白名单内、per-item 路由（/oc /user /collection/interaction）传了 `uuid`（自指路由 /topic /tag /activity 可省，SDK 自动填）；写意图统一走 `nav.internal` |
 | §6 | 三上下文自测（iOS 真机 / Android 真机 / Web 内嵌 + 游客裸链），逐项过 references/compliance.md F 段 |
 | §7 | `pnpm deploy:dry` 干跑预检通过，然后 `pnpm deploy:prod` 正式上线 |
 | §8 | 逐项过 references/compliance.md A-G 所有红线，任一不过不上线 |

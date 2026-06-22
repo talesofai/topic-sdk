@@ -49,10 +49,11 @@ export function App() {
     void sdk.nav.internal("/collection/interaction", { uuid: story.storyId }).catch(() => {});
   };
 
-  // 页面级写意图：游客唤起 App；嵌入态由宿主固定浮层承载（页面无法调 overlay.*，D9）
+  // 页面级写意图：统一走 nav.internal（hashtag 由 SDK 自动填）。
+  // 游客（仅本地 dev 无宿主）内部转唤起 App；嵌入态由宿主承载（手机浏览器唤起 App / 站内跳；登录分享走宿主固定浮层，D9）。
   const onWriteIntent = () => {
     if (isGuest) {
-      sdk.guest.openApp("/tag", { hashtag });
+      void sdk.nav.internal("/tag").catch(() => {});
     } else {
       void sdk.ui.toast("请使用顶部的分享 / 登录入口", { level: "info" }).catch(() => {});
     }

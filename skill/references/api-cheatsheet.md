@@ -29,8 +29,9 @@ const sdk = await createTopicSDK({
 | `sdk.nav` | `internal(route, query?)` / `external(url)` |
 | `sdk.ui` | `toast(text, opts?)` / `viewport()` |
 | `sdk.events` | `on('tokenChanged'\|'viewport'\|'back', cb)` / `off(...)` |
-| `sdk.guest` | `openApp(route, query?)` 游客唤起 App |
 | `sdk.destroy()` | 释放 |
+
+> 没有 `sdk.guest.openApp` / 写动作 API。唤起 App 由宿主承载——一律用 `sdk.nav.internal`（手机浏览器宿主会自动唤起 App，见下）。
 
 ## 数据方法
 
@@ -124,22 +125,26 @@ interface CreatorCard {
 
 ## 导航 — AllowedRoute v1 白名单
 
-`sdk.nav.internal(route, query?)` 的 route 必须 ∈：
+`sdk.nav.internal(route, query?)` 的 route 必须 ∈下表。**参数契约按路由性质分两类，传错/漏传会被 SDK 拦下（构建期类型 + 运行期 throw），不会再静默白屏**：
 
-| route | 含义 |
-|---|---|
-| `/tag` | 话题页 |
-| `/topic` | 话题聚合 |
-| `/activity` | 活动详情 |
-| `/ranking` | 榜单 |
-| `/collection/interaction` | 作品详情（含查看/写交互入口） |
-| `/oc` | 角色/OC |
-| `/user` | 用户主页（青少年模式受限） |
-| `/generate` | 去创作 |
+| route | 含义 | 必需参数 | 谁来填 |
+|---|---|---|---|
+| `/topic` | 话题聚合 | `hashtag` | **自指**：省略则 SDK 从当前页 `?hashtag=` 自动填，可覆盖 |
+| `/tag` | 话题页 | `hashtag` | **自指**：同上自动填 |
+| `/activity` | 活动详情 | `uuid` | **自指**：省略则 SDK 从当前页 `?activity_uuid=` 自动填（宿主已注入），可覆盖 |
+| `/ranking` | 榜单 | 无 | — |
+| `/generate` | 去创作 | 无 | — |
+| `/collection/interaction` | 作品详情（含查看/写交互入口） | `uuid` | **per-item**：必传，来自被点卡片（如 `{ uuid: story.storyId }`） |
+| `/oc` | 角色/OC | `uuid` | **per-item**：必传（如 `{ uuid: character.uuid }`） |
+| `/user` | 用户主页（青少年模式受限） | `uuid` | **per-item**：必传（如 `{ uuid: creator.uuid }`） |
+
+> **自指 vs per-item**：参数=「当前这个话题/活动」→ 自指，可省（SDK 自动填）；参数=「具体某个角色/用户/作品」→ per-item，必传（SDK 无从代填，漏传直接抛错）。
+>
+> 示例：`sdk.nav.internal('/topic')`（自动填当前话题）；`sdk.nav.internal('/oc', { uuid: c.uuid })`（必传）。
 
 不放行（宿主会拒）：`/collection/publish`、`/picture-selector`、`/webview`。
 
-> 清单为推荐默认，遇问题再调。`guest` 上下文下 `nav.internal` 自动转 `openApp` 深链，且 SDK 会做运行期白名单校验（非白名单 route 抛错）。
+> SDK 做运行期白名单校验（非白名单 route 抛错）。`guest` 上下文（仅本地 dev 无宿主可达）下 `nav.internal` 内部转深链；生产入口恒为宿主内嵌，手机浏览器宿主会自动唤起 App。
 
 ## 鉴权 / token 模型
 

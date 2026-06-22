@@ -463,7 +463,6 @@ var Capability = /* @__PURE__ */ ((Capability2) => {
   Capability2["EventBack"] = "event.back";
   Capability2["EventTokenChanged"] = "event.tokenChanged";
   Capability2["EventViewport"] = "event.viewport";
-  Capability2["OpenApp"] = "guest.openApp";
   return Capability2;
 })(Capability || {});
 
@@ -512,8 +511,6 @@ function buildCapabilities(env) {
     caps.add("event.back" /* EventBack */);
     caps.add("event.tokenChanged" /* EventTokenChanged */);
     caps.add("event.viewport" /* EventViewport */);
-  } else {
-    caps.add("guest.openApp" /* OpenApp */);
   }
   return caps;
 }
@@ -670,21 +667,53 @@ var GuestOpenAppImpl = class {
 };
 
 // src/nav.ts
+var SELF_PARAM_FROM_URL = {
+  "/topic": { param: "hashtag", urlKey: "hashtag" },
+  "/tag": { param: "hashtag", urlKey: "hashtag" },
+  "/activity": { param: "uuid", urlKey: "activity_uuid" }
+};
+var REQUIRED_PARAMS = {
+  "/oc": ["uuid"],
+  "/user": ["uuid"],
+  "/collection/interaction": ["uuid"]
+};
+var isBlank = (v) => v === void 0 || v === null || v === "";
 var SDKNavImpl = class {
   constructor(_bridge, _context) {
     this._bridge = _bridge;
     this._context = _context;
     this._guestOpenApp = new GuestOpenAppImpl();
   }
+  /**
+   * 解析最终 query：自指路由缺参从 URL 自动填；per-item 路由缺必需参数则抛错（开发期就被打回，而非线上白屏）。
+   */
+  _resolveQuery(route, query) {
+    const q = { ...query ?? {} };
+    const selfRef = SELF_PARAM_FROM_URL[route];
+    if (selfRef && isBlank(q[selfRef.param]) && typeof window !== "undefined") {
+      const fromUrl = new URLSearchParams(window.location.search).get(selfRef.urlKey);
+      if (fromUrl)
+        q[selfRef.param] = fromUrl;
+    }
+    const required = REQUIRED_PARAMS[route] ?? (selfRef ? [selfRef.param] : []);
+    for (const p of required) {
+      if (isBlank(q[p])) {
+        const hint = selfRef ? `\u8BE5\u81EA\u6307\u8DEF\u7531\u901A\u5E38\u7531 SDK \u4ECE\u5F53\u524D\u9875 ?${selfRef.urlKey}= \u81EA\u52A8\u586B\uFF0C\u4F46\u5F53\u524D URL \u6CA1\u6709\u8BE5\u503C` : `\u8BE5\u8DEF\u7531\u6307\u5411\u5177\u4F53\u5B9E\u4F53\uFF0C\u8BF7\u4ECE\u88AB\u70B9\u5361\u7247\u6570\u636E\u4F20\u5165 ${p}\uFF08\u5982 ${p}: story.uuid\uFF09`;
+        throw new Error(`[topic-sdk] nav.internal('${route}') \u7F3A\u5C11\u5FC5\u9700\u53C2\u6570 '${p}'\u3002${hint}\u3002`);
+      }
+    }
+    return q;
+  }
   async internal(route, query) {
+    const effectiveQuery = this._resolveQuery(route, query);
     if (this._context === "guest") {
-      this._guestOpenApp.openApp(route, query);
+      this._guestOpenApp.openApp(route, effectiveQuery);
       return;
     }
     if (!this._bridge) {
       throw new UnsupportedError("nav.internal", this._context);
     }
-    await this._bridge.send("nav.internal", { route, query: query ?? {} });
+    await this._bridge.send("nav.internal", { route, query: effectiveQuery });
   }
   async external(url) {
     if (this._context === "guest") {
@@ -829,7 +858,6 @@ async function createTopicSDK(options = {}) {
   const rankImpl = new SDKRankImpl(apiBaseUrl, auth);
   const navImpl = new SDKNavImpl(activeBridge, env.context);
   const uiImpl = new SDKUiImpl(activeBridge, env.context);
-  const guestImpl = new GuestOpenAppImpl();
   const removeLinkInterceptor = installLinkInterceptor(navImpl);
   const sdk = {
     env: {
@@ -846,7 +874,6 @@ async function createTopicSDK(options = {}) {
     nav: navImpl,
     ui: uiImpl,
     events: eventsImpl,
-    guest: guestImpl,
     can(cap) {
       return capabilities.has(cap);
     },

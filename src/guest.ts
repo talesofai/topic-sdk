@@ -70,7 +70,7 @@ export class GuestOpenAppImpl implements GuestOpenApp {
 
   private _showSuckBrowserGuide(): void {
     // SDK 不依赖 DOM 框架，用原生 alert 作为最低限度可见反馈（避免静默无反应）。
-    // 消费方可在调用前用 sdk.can(Capability.OpenApp) 判断，并自行用 overlay/toast 替换更友好的引导 UI。
+    // 本类仅在 guest 上下文（本地 dev 无宿主）由 nav.internal 内部调用；生产入口恒为宿主内嵌，由宿主承载更友好的引导 UI。
     const message = "请在系统浏览器（Safari / Chrome）中打开本页面，再点击「打开 App」。微信/QQ 内置浏览器无法直接唤起 App。";
     if (typeof window !== "undefined" && typeof window.alert === "function") {
       window.alert(message);

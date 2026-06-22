@@ -73,10 +73,8 @@ export function buildCapabilities(env: EnvResult): Set<Capability> {
     caps.add(Capability.EventBack);
     caps.add(Capability.EventTokenChanged);
     caps.add(Capability.EventViewport);
-  } else {
-    // 游客唤起
-    caps.add(Capability.OpenApp);
   }
+  // guest（仅本地 dev 无宿主可达）：仅只读数据能力；唤起 App 统一靠宿主 nav.internal，不再暴露独立 OpenApp 能力。
 
   return caps;
 }
