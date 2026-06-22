@@ -39,7 +39,7 @@ description: >-
 ## 0. 先读死规矩（贯穿全程，违反即返工）
 
 1. **只读 + 不持写权**：页面只调 `/v1/embed/*` 只读接口，只持 `embed token`（`token_type='embed'`）。**绝不**持有/存储/传递用户的 `x-token`。
-2. **写动作全在宿主**（D9）：分享/登录/举报由宿主固定浮层提供，页面不绘制不调用；SDK **不暴露** `overlay.*` 写方法。点赞/关注/收藏这类 per-item 写 → `sdk.nav.internal('/collection/interaction', {uuid})` 点卡跳原生页去做。
+2. **宿主顶栏 + 写动作全在宿主**（D9）：宿主顶栏/固定浮层**已提供**「**返回 / 分享 / 主页(一键回内嵌页首页) / 开发者菜单(仅授权用户)**」+ 登录/举报——**页面绝不自绘这些**(返回、分享、主页、登录、举报等),自绘会与宿主重复/冲突。SDK **不暴露** `overlay.*` 写方法。点赞/关注/收藏这类 per-item 写 → `sdk.nav.internal('/collection/interaction', {uuid})` 点卡跳原生页去做。
 3. **URL 统一**：对外唯一身份永远是 `app.nieta.art/tag?hashtag=X`（短链 `t.nieta.art`）。**OSS URL 是内部实现细节，永不写进分享链/`<a href>`/规范链。**
 4. **token 只在内存**：不写 `localStorage`/`sessionStorage`/`cookie`。
 5. **禁 `history.pushState`**：用 hash 路由或内存路由（否则 Android 返回键会先消费 iframe 内 history）。
