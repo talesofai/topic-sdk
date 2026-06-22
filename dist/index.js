@@ -338,6 +338,21 @@ var SDKTopicImpl = class {
   async listLoreEvents(name) {
     return apiFetch(this._baseUrl, `/v1/embed/topic/${encodeURIComponent(name)}/lore-events`, this._auth);
   }
+  async listHot(name) {
+    const resp = await apiFetch(
+      this._baseUrl,
+      `/v1/embed/topic/${encodeURIComponent(name)}/hot-stories`,
+      this._auth
+    );
+    return resp.stories;
+  }
+  async getWeeklyHottest(name) {
+    return apiFetch(
+      this._baseUrl,
+      `/v1/embed/topic/${encodeURIComponent(name)}/weekly-hottest`,
+      this._auth
+    );
+  }
 };
 var SDKActivityImpl = class {
   constructor(_baseUrl, _auth) {
@@ -437,6 +452,7 @@ var Capability = /* @__PURE__ */ ((Capability2) => {
 // src/env.ts
 async function detectEnv(bridge, sdkVersion, helloTimeout) {
   const ua = navigator.userAgent;
+  const activityUuid = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("activity_uuid") || null : null;
   if (/miniProgram/i.test(ua)) {
     throw new UnsupportedError("weapp-not-supported", "guest");
   }
@@ -448,7 +464,8 @@ async function detectEnv(bridge, sdkVersion, helloTimeout) {
       client: "unknown",
       appVersion: null,
       features: [],
-      hello: null
+      hello: null,
+      activityUuid
     };
   }
   const context = hello.client === "ios" || hello.client === "android" ? "app" : "web-embedded";
@@ -458,7 +475,8 @@ async function detectEnv(bridge, sdkVersion, helloTimeout) {
     client: hello.client,
     appVersion: hello.appVersion,
     features: hello.features,
-    hello
+    hello,
+    activityUuid
   };
 }
 function buildCapabilities(env) {
@@ -468,8 +486,10 @@ function buildCapabilities(env) {
   caps.add("read.characters" /* ReadCharacters */);
   caps.add("read.campaigns" /* ReadCampaigns */);
   caps.add("read.loreEvents" /* ReadLoreEvents */);
-  caps.add("read.activity" /* ReadActivity */);
   caps.add("read.rank" /* ReadRank */);
+  if (env.activityUuid) {
+    caps.add("read.activity" /* ReadActivity */);
+  }
   if (env.context !== "guest") {
     caps.add("bridge" /* Bridge */);
     caps.add("nav.internal" /* NavInternal */);

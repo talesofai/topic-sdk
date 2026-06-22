@@ -21,7 +21,10 @@ description: >-
 
 做内嵌话题页，你（创作者）只要说清楚**业务内容**（话题要展示什么、按钮点了跳哪里），技术活全交给 agent。
 
-> **发布模型**：创作者可以自己发**草稿**（dev 令牌 + `pnpm deploy:dev`，不上线），然后在 app 内用开发者菜单挑这个版本调试；满意后**请内部团队**用 `pnpm deploy:prod` 上线。**创作者只能发草稿（dev），永不能上线（prod）。**
+> **发布模型（权限分级，后端强制）**：
+> - **创作者 → 只能 dev**：用绑定该话题活动的 dev 令牌 + `pnpm deploy:dev` 发**草稿**（不上线），在 app 内用开发者菜单挑这个版本调试；满意后**请内部团队**上线。**创作者永不能 prod。**
+> - **内部用户（`is_internal`）→ 可 prod + dev**：用完整登录态 `pnpm deploy:prod` 上线（激活绑定），也可发 dev 草稿。
+> - 后端对 `target=prod` / `activate` / `unbind` 只接受 `is_internal` 完整登录态；scoped dev 令牌请求这些动作直接被拒（403）。
 > **已有现成 HTML**：把 HTML（或链接）给 agent，说"我有个现成页面想做成话题页"，agent 走 §2 的现成-HTML 入口。
 > **SDK 安装**：`@talesofai/topic-sdk` 是**公开仓库**（`github.com/talesofai/topic-sdk`），`pnpm install` 时直接通过 git 源安装，任何人免认证可装，无需特殊权限。
 
@@ -110,11 +113,12 @@ description: >-
 ### 7.1 获取 dev 令牌（一次性，7 天有效）
 
 1. 用**创作者自己的账号**登录 nieta-app。
-2. 进入「账号设置 → 话题页开发者令牌」，点「生成开发令牌」。
+2. 进入**该话题页**，点右上角**「⋯」→「开发者菜单」→「生成开发令牌」**（令牌入口在话题页顶栏的开发者菜单里，不在账号设置）。
 3. 平台调用 `POST /v1/topic-embed/dev-publish-token`（正常登录态），返回 `{ token, expires_at }`（TTL 7 天）。
 4. 复制令牌。
 
-> **令牌安全说明**：这是平台签发的 **scoped dev 令牌**（`token_type='topic_dev_publish'`），与用户完整登录态（`x-token`）、embed token 三向隔离。泄露影响：只能对创作者自己有权限的话题发草稿，不能上线、不能做其它用户操作。令牌过期后重新生成。
+> **令牌绑定具体话题活动**：dev 令牌签发时就**绑定你正在操作的这个话题活动**——只有该活动的创作者（或内部用户）能签发，且签出的令牌**只能对这一个活动发草稿**，对别的话题无效。所以要给哪个话题发草稿，就进哪个话题页生成令牌；换话题要重新生成。
+> **令牌安全说明**：这是平台签发的 **scoped dev 令牌**（`token_type='topic_dev_publish'`），与用户完整登录态（`x-token`）、embed token 三向隔离。泄露影响：只能对该话题发草稿，不能上线（prod）、不能做其它用户操作。令牌过期后重新生成。
 
 ### 7.2 配置 .env
 
@@ -165,6 +169,8 @@ pnpm deploy:dev
 ## 8. 合规门（上线前必须）
 
 **多数红线已机器兜底**：`pnpm deploy:dev/prod` 会先跑 `tsc --noEmit`（类型门：可空字段裸用 / 不存在字段 / strict 降级）+ **源码红线扫描**（localStorage/sessionStorage/cookie、`history.pushState`、ServiceWorker、写方法 fetch、`EventSource`、`window.parent.postMessage`、自设 CSP `<meta>`、OSS 可见引用、OAuth 残留）+ 单 HTML 入口校验；命中直接 fail 打回。SDK 运行期还会拦原生 `<a>` 跳转（转 bridge）、守卫 `history.pushState`（embedded 即 throw）。**你不必靠记忆遵守这些——违反会在发布/运行时当场报错。**（确系合法的同源用途，可在该行加注释 `sdk-compliance-ok` 豁免，需内部 review。）
+>
+> **定位说明（重要）**：源码红线扫描是**防手滑的 lint / 纵深防御，不是安全边界**——它逐行正则匹配，可被动态构造（`window["local"+"Storage"]`）、第三方依赖夹带、`sdk-compliance-ok` 注释绕过，且只扫 `src/` 不扫 `node_modules`。**真正的安全边界在后端**：embed token 只读、`/v1/embed/*` 无写接口、token 三向隔离（embed / dev-publish / x-token），即便页面违规也拿不到写能力或 x-token。所以**别把"扫描通过"等同于"安全"**，也别据此放松后端只读约束。
 
 仍需人工逐项过 `references/compliance.md` 的：三端真机自测（§F）、可空字段语义判空是否合理（类型门只保证不裸用）、文案 / 视觉。**任一不过不交付，停下来报告用户。**
 

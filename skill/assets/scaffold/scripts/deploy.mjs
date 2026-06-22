@@ -57,6 +57,10 @@ const ASSET_CACHE = "max-age=31536000";
 const HTML_CACHE = "no-cache,no-store,must-revalidate";
 const UPLOAD_CONCURRENCY = 8;
 const FILE_COUNT_WARN_THRESHOLD = 800;
+// 上传大小硬上限（与后端一致）：单文件 10MB、所有文件总和 100MB。
+// 早于上传 fail（grant 下发的 max_file_size 仍单独校验，二者取更严者）。
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_TOTAL_BYTES = 100 * 1024 * 1024;
 
 function fail(msg) {
   console.error(`\n[deploy] 错误：${msg}`);
@@ -350,6 +354,25 @@ async function main() {
   }
   const files = collectDistFiles();
   info(`dist/ 共 ${files.length} 个文件待上传。`);
+
+  // 大小预检（早于上传 fail，复用 collectDistFiles 的 size）：
+  // 任一文件 > 10MB，或所有文件总和 > 100MB，直接打回。常量与后端一致。
+  let totalBytes = 0;
+  for (const f of files) {
+    totalBytes += f.size;
+    if (f.size > MAX_FILE_BYTES) {
+      fail(
+        `单文件超过大小上限（${MAX_FILE_BYTES} 字节 / 10MB）：${f.relKey}（${f.size} 字节）。` +
+          `请精简该资源后重试。`,
+      );
+    }
+  }
+  if (totalBytes > MAX_TOTAL_BYTES) {
+    fail(
+      `dist/ 总大小超过上限（${MAX_TOTAL_BYTES} 字节 / 100MB）：当前 ${totalBytes} 字节。` +
+        `请精简产物后重试。`,
+    );
+  }
 
   const allowed = new Set((allowed_suffixes || []).map((s) => String(s).toLowerCase()));
   for (const f of files) {

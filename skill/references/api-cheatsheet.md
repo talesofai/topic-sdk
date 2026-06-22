@@ -43,6 +43,10 @@ sdk.topic.listCharacters(name, { parentType?: string[], pageIndex, pageSize, sor
   // parentType 省略 → 后端默认 ['oc','elementum']
 sdk.topic.listCampaigns(name, { pageIndex, pageSize }): Promise<Page<CampaignCard>>
 sdk.topic.listLoreEvents(name): Promise<LoreEvent[]>
+sdk.topic.listHot(name): Promise<HotStoryCard[]>
+  // 话题算法热门流（bounded 热门列表，无分页）；每条 = StoryCard 全字段 + hotScore:number
+sdk.topic.getWeeklyHottest(name): Promise<WeeklyHottest | null>
+  // 本周最热单品（近 7 天同款 UV 最高一条）；无则 null
 
 sdk.activity.listTabs(uuid): Promise<TopicTab[]>
 sdk.activity.listSelectedStories(uuid, tabKey, { pageIndex, pageSize, sort? }): Promise<HighlightPage>
@@ -107,6 +111,21 @@ interface HighlightPage extends Page<StoryCard & { highlightTime: number | null 
   topList: StoryCard[];           // 仅 pageIndex=0 非空
 }
 
+interface HotStoryCard extends StoryCard {
+  hotScore: number;               // 热度分（后端 doc.sort[0]*1000 取整），int
+}
+
+interface WeeklyHottest {         // getWeeklyHottest 可空：无近 7 天最热则整体为 null
+  collectionUuid: string;
+  title: string;
+  coverUrl: string | null;        // ← 可空
+  sameStyleUv: number;
+  creatorName: string;
+  creatorUuid: string;
+  creatorAvatar: string | null;   // ← 可空
+  isInteractive: boolean;
+}
+
 interface Leaderboard<T> {
   window: 'daily'|'weekly'|'monthly';
   entity: 'stories'|'creators'|'oc'|'elementum';
@@ -167,3 +186,12 @@ interface CreatorCard {
 - `TopicApiError(statusCode, message, endpoint, cause?)` — HTTP/网络/解析错误（statusCode -1 = 网络/解析）。
 - `BridgeError(code, method, requestId, cause?)` — bridge 通信（timeout/rejected/...）。
 - `UnsupportedError(capability, context)` — 当前上下文不支持的能力（不静默 no-op）。
+
+## 发布 / 上传大小限制
+
+`scripts/deploy.mjs` 上传前本地预检（早于上传 fail）：
+
+- 单文件 **≤ 10MB**；任一文件超限直接打回。
+- `dist/` 所有文件**总和 ≤ 100MB**；超限直接打回。
+
+> 常量与后端一致；grant 下发的 `max_file_size` 仍单独校验，二者取更严者。

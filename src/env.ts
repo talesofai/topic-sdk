@@ -10,10 +10,15 @@ export interface EnvResult {
   appVersion: string | null;
   features: string[];
   hello: HelloResult | null;
+  /** 宿主注入的 ?activity_uuid=（无则 null）。决定 ReadActivity 能力是否授予（纯 hashtag 话题无活动数据）。 */
+  activityUuid: string | null;
 }
 
 export async function detectEnv(bridge: BridgeClient, sdkVersion: string, helloTimeout: number): Promise<EnvResult> {
   const ua = navigator.userAgent;
+  // 宿主把绑定的 activity_uuid 作为 query 注入 iframe（无则纯 hashtag 话题）。
+  const activityUuid =
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("activity_uuid") || null : null;
 
   // UA 预判：小程序直接出局
   if (/miniProgram/i.test(ua)) {
@@ -32,6 +37,7 @@ export async function detectEnv(bridge: BridgeClient, sdkVersion: string, helloT
       appVersion: null,
       features: [],
       hello: null,
+      activityUuid,
     };
   }
 
@@ -45,6 +51,7 @@ export async function detectEnv(bridge: BridgeClient, sdkVersion: string, helloT
     appVersion: hello.appVersion,
     features: hello.features,
     hello,
+    activityUuid,
   };
 }
 
@@ -60,8 +67,12 @@ export function buildCapabilities(env: EnvResult): Set<Capability> {
   caps.add(Capability.ReadCharacters);
   caps.add(Capability.ReadCampaigns);
   caps.add(Capability.ReadLoreEvents);
-  caps.add(Capability.ReadActivity);
   caps.add(Capability.ReadRank);
+  // ReadActivity 仅当话题绑定了 activity（宿主注入 ?activity_uuid=）才授予；纯 hashtag 话题无活动数据，
+  // 不报 ReadActivity，避免 can(ReadActivity) 恒 true 误导创作者渲染空活动区块。
+  if (env.activityUuid) {
+    caps.add(Capability.ReadActivity);
+  }
 
   if (env.context !== "guest") {
     // 桥接能力（仅 App/Web-embedded）

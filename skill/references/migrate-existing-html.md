@@ -78,7 +78,7 @@
 | # | 问用户的问题（大白话） | 对应技术字段 |
 |---|---|---|
 | Q1 | 这个话题页对应哪个话题？请提供话题的 `activity_uuid`（平台/运营已分配，形如一串字母数字）。 | `.env` 的 `NIETA_ACTIVITY_UUID` |
-| Q2 | 登录 nieta-app 后，请在 App 的"我的"→"开发者"或找运营同学拿到你的 **API bearer token**（以 `Bearer ` 开头的那串），用来上传页面。 | `.env` 的 `NIETA_API_TOKEN` |
+| Q2 | 用你自己的账号登录 nieta-app，进入这个话题页，点右上角「⋯」→「开发者菜单」→「生成开发令牌」，拿到 **dev 开发令牌**（scoped，7 天有效，绑定本话题活动），用来发草稿调试。**不要提供你的完整登录 token / x-token。** | `.env` 的 `NIETA_DEV_PUBLISH_TOKEN` |
 | Q3 | 页面里有"查看作品详情"这类跳转按钮，你希望点了之后跳到 App 里的哪个页面？（例如：跳作品详情页、跳话题页、跳排行榜……） | `sdk.nav.internal` 的 route 参数 |
 | Q4 | 页面里展示榜单数据，是要展示日榜、周榜还是月榜？是作品榜、创作者榜，还是 OC/元素榜？ | `sdk.rank.get(entity, window, at)` 的参数 |
 | Q5 | 页面里展示的精选内容对应活动的哪个 tab？（如果你知道 tab key 就填，不知道可以让 agent 用 `sdk.activity.listTabs(uuid)` 动态查） | `sdk.activity.listSelectedStories` 的 tabKey |
@@ -128,7 +128,7 @@ jQuery 如果是 CDN 引入，改为 `pnpm add jquery` 并 `import $ from 'jquer
 ### §3.1 从 scaffold 建立工作目录
 
 1. 把 `skill/assets/scaffold/` 目录内所有文件复制为创作者的独立项目目录（不在 monorepo 内）。
-2. 执行 `cp .env.example .env`，填入 Q1/Q2 收集到的 `NIETA_ACTIVITY_UUID` 和 `NIETA_API_TOKEN`，`NIETA_API_BASE` 填 `https://api.talesofai.cn`。
+2. 执行 `cp .env.example .env`，填入 Q1/Q2 收集到的 `NIETA_ACTIVITY_UUID` 和 `NIETA_DEV_PUBLISH_TOKEN`（dev 开发令牌），`NIETA_API_BASE` 填 `https://api.talesofai.cn`。**不要填 `NIETA_API_TOKEN`——那是内部上线用的完整登录态，创作者不持有、也用不上。**
 3. `pnpm install`。
 
 **自检**：`pnpm install` 成功，`.env` 三个变量不是占位符值，`node_modules/@talesofai/topic-sdk` 存在。
@@ -442,8 +442,8 @@ function navigate(view: string) { currentView = view; renderView(); }
 | §4 | 验证数据渲染：`getDetail`/`listStories` 成功，可空字段均判空 |
 | §5 | 验证导航：所有 `nav.internal` 的 route 在白名单内、per-item 路由（/oc /user /collection/interaction）传了 `uuid`（自指路由 /topic /tag /activity 可省，SDK 自动填）；写意图统一走 `nav.internal` |
 | §6 | 三上下文自测（iOS 真机 / Android 真机 / Web 内嵌 + 游客裸链），逐项过 references/compliance.md F 段 |
-| §7 | `pnpm deploy:dry` 干跑预检通过，然后 `pnpm deploy:prod` 正式上线 |
-| §8 | 逐项过 references/compliance.md A-G 所有红线，任一不过不上线 |
+| §7 | `pnpm deploy:dry` 干跑预检通过，然后 `pnpm deploy:dev` 发草稿，在 app 开发者菜单选版本真机调试；调试满意后把项目源码**交付内部团队发布**（创作者只能 dev，永不能 prod） |
+| §8 | 逐项过 references/compliance.md A-G 所有红线，任一不过不交付 |
 
 **改造后额外的自检项**（原 scaffold 不需要、迁移才需要）：
 

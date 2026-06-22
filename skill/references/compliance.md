@@ -44,5 +44,6 @@
 - [ ] 两段式上传：资产长缓存、HTML 禁缓存 + 上传管线 `--headers` 注入 CSP（非 HTML `<meta>` 自设）。
 - [ ] 用 STS scoped token（限 `static/topic/<uuid>/`），**未用**永久 AK。
 - [ ] OSS 域（`oss.talesofai.cn`）已由运营/后端加入宿主 origin 白名单。
+- [ ] **产物大小**：单文件 ≤ 10MB、`dist/` 总和 ≤ 100MB（deploy 上传前本地预检 fail-fast，常量与后端一致）。超限请精简产物。
 
 > **诚实 caveat**：CSP 同时允许"外站 JS"+"对外数据连接"时，"禁外站显示内容"只能 best-effort（外站 JS 可 fetch 字节再 canvas 画出绕过）。这是结构性缺口，靠"页面可下架"兜底。

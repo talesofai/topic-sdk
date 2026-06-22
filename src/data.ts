@@ -4,6 +4,7 @@ import type {
   CharacterCard,
   CreatorCard,
   HighlightPage,
+  HotStoryCard,
   Leaderboard,
   LoreEvent,
   Page,
@@ -16,6 +17,7 @@ import type {
   StoryCard,
   TopicDetail,
   TopicTab,
+  WeeklyHottest,
 } from "./types.js";
 
 // ————— 内部 fetch 工具 —————
@@ -142,6 +144,25 @@ export class SDKTopicImpl implements SDKTopic {
 
   public async listLoreEvents(name: string): Promise<LoreEvent[]> {
     return apiFetch<LoreEvent[]>(this._baseUrl, `/v1/embed/topic/${encodeURIComponent(name)}/lore-events`, this._auth);
+  }
+
+  public async listHot(name: string): Promise<HotStoryCard[]> {
+    // 后端响应模型为 { stories: HotStoryCard[] }（无分页 bounded 热门列表），此处解包为数组。
+    const resp = await apiFetch<{ stories: HotStoryCard[] }>(
+      this._baseUrl,
+      `/v1/embed/topic/${encodeURIComponent(name)}/hot-stories`,
+      this._auth,
+    );
+    return resp.stories;
+  }
+
+  public async getWeeklyHottest(name: string): Promise<WeeklyHottest | null> {
+    // 后端响应模型为 WeeklyHottest | null（无近 7 天同款 UV 最高作品时返回 null）。
+    return apiFetch<WeeklyHottest | null>(
+      this._baseUrl,
+      `/v1/embed/topic/${encodeURIComponent(name)}/weekly-hottest`,
+      this._auth,
+    );
   }
 }
 

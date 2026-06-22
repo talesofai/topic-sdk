@@ -85,6 +85,26 @@ export interface StoryCard {
   } | null;
 }
 
+// ————— 话题热门流 / 本周最热 —————
+
+/** 话题算法热门流的作品卡片：现有 StoryCard 全字段 + 热度分（已乘 1000 取整）。 */
+export interface HotStoryCard extends StoryCard {
+  /** 热度分（后端 doc.sort[0]*1000 取整），int。 */
+  hotScore: number;
+}
+
+/** 本周最热单品（近 7 天同款 UV 最高的一条），无则 null。全 camelCase。 */
+export interface WeeklyHottest {
+  collectionUuid: string;
+  title: string;
+  coverUrl: string | null;
+  sameStyleUv: number;
+  creatorName: string;
+  creatorUuid: string;
+  creatorAvatar: string | null;
+  isInteractive: boolean;
+}
+
 // ————— 活动精选 —————
 
 export interface HighlightPage extends Page<StoryCard & { highlightTime: number | null }> {
@@ -282,6 +302,18 @@ export interface SDKTopic {
 
   /** GET /v1/embed/topic/{name}/lore-events */
   listLoreEvents(name: string): Promise<LoreEvent[]>;
+
+  /**
+   * GET /v1/embed/topic/{name}/hot-stories
+   * 话题算法热门流（bounded 热门列表，无分页），每条带 hotScore。
+   */
+  listHot(name: string): Promise<HotStoryCard[]>;
+
+  /**
+   * GET /v1/embed/topic/{name}/weekly-hottest
+   * 本周最热单品（近 7 天同款 UV 最高的一条），无则 null。
+   */
+  getWeeklyHottest(name: string): Promise<WeeklyHottest | null>;
 }
 
 export interface SDKActivity {
