@@ -217,7 +217,7 @@ function scanPageSourceForViolations() {
     { re: /\bnew\s+EventSource\s*\(/, msg: "禁止 EventSource；数据走 sdk.* 只读接口" },
     { re: /window\s*\.\s*parent\s*\.\s*postMessage\s*\(/, msg: "禁止直接 window.parent.postMessage；只经 SDK bridge 通信" },
     { re: /<meta[^>]+http-equiv\s*=\s*["']?\s*content-security-policy/i, msg: "禁止页面自设 CSP <meta>（与上传注入的对象头取交集会白屏）；CSP 由 deploy 注入" },
-    { re: /location\s*\.\s*(href|assign|replace)\b[^;\n]*(\/oauth|\/login|\/authorize|\/callback)/i, msg: "禁止 OAuth/登录跳转残留；登录由宿主处理，游客用 sdk.guest.openApp" },
+    { re: /location\s*\.\s*(href|assign|replace)\b[^;\n]*(\/oauth|\/login|\/authorize|\/callback)/i, msg: "禁止 OAuth/登录跳转残留；登录由宿主处理，写意图统一走 sdk.nav.internal" },
   ];
   const OSS_RE = /oss\.talesofai\.cn/;
   const OSS_VISIBLE_RE = /<a[\s>]|href\s*=|textContent|innerHTML|innerText/;
