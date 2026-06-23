@@ -5,7 +5,7 @@ description: >-
   话题页 (topic page) for nieta-app using the @talesofai/topic-sdk runtime. Use
   this when a creator (or an agent acting for them) wants to build a custom topic
   page, render read-only /v1/embed data, handle the app / web-embedded / guest
-  three-state degradation, wire navigation and guest open-app, and publish a
+  three-state degradation, wire navigation (host carries app launch), and publish a
   draft for in-app debugging. The creator delivers the finished and debugged
   project to the internal team for prod publishing. Triggers: "自定义话题页",
   "内嵌话题页", "topic-sdk", "embed topic page", "搭话题页".
