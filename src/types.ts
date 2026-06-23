@@ -271,8 +271,8 @@ export interface SDKAuth {
   isAuthenticated(): boolean;
 }
 
-/** listMyStories 的 kind：favored=当前 user 收藏的本话题作品；created=当前 user 在本话题投稿的作品。 */
-export type MyStoryKind = "favored" | "created";
+/** listMyStories 的 kind：favored=当前 user 收藏的本话题作品；created=当前 user 在本话题投稿的作品；liked=当前 user 点赞的本话题作品。 */
+export type MyStoryKind = "favored" | "created" | "liked";
 
 export interface SDKTopic {
   /** GET /v1/embed/topic/{name} */

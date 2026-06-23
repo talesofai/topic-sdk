@@ -43,7 +43,7 @@ sdk.topic.listStories(name, { pageIndex, pageSize, sort, startTime?, endTime?, a
   //   ⚠ 后端仅当两端都传时才下推为窗口（ms→秒）；单边提供按"未提供"忽略（保持全量语义）。
   // authorUuid?: string：可选作者过滤。authorUuid 解析不到（不存在/拼错）→ 后端返回空 Page，不退化成全量。
 sdk.topic.listMyStories(name, { kind, pageIndex?, pageSize? }): Promise<Page<StoryCard>>
-  // kind: 'favored'（当前 user 收藏的本话题作品）| 'created'（当前 user 在本话题投稿的作品）
+  // kind: 'favored'（我收藏的本话题作品）| 'created'（我投稿的）| 'liked'（我点赞的）
   // 鉴权来自 embed token：匿名（无 embed token）返回空 Page（total=0、list=[]、hasNext=false），不抛错、不 401。
   // pageIndex/pageSize 可选（后端默认 pageIndex=0、pageSize=20、kind 默认 created）。
 sdk.topic.listCharacters(name, { parentType?: string[], pageIndex, pageSize, sort? }): Promise<Page<CharacterCard>>

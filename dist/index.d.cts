@@ -209,8 +209,8 @@ interface SDKAuth {
     /** 是否已登录（有有效 token） */
     isAuthenticated(): boolean;
 }
-/** listMyStories 的 kind：favored=当前 user 收藏的本话题作品；created=当前 user 在本话题投稿的作品。 */
-type MyStoryKind = "favored" | "created";
+/** listMyStories 的 kind：favored=当前 user 收藏的本话题作品；created=当前 user 在本话题投稿的作品；liked=当前 user 点赞的本话题作品。 */
+type MyStoryKind = "favored" | "created" | "liked";
 interface SDKTopic {
     /** GET /v1/embed/topic/{name} */
     getDetail(name: string): Promise<TopicDetail>;
