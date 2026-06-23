@@ -209,6 +209,8 @@ interface SDKAuth {
     /** 是否已登录（有有效 token） */
     isAuthenticated(): boolean;
 }
+/** listMyStories 的 kind：favored=当前 user 收藏的本话题作品；created=当前 user 在本话题投稿的作品。 */
+type MyStoryKind = "favored" | "created";
 interface SDKTopic {
     /** GET /v1/embed/topic/{name} */
     getDetail(name: string): Promise<TopicDetail>;
@@ -217,6 +219,22 @@ interface SDKTopic {
         pageIndex: number;
         pageSize: number;
         sort: "hot" | "like_count" | "highlight_mark_time";
+        /** 可选时间窗（UTC ms），透传后端 start_time/end_time */
+        startTime?: number;
+        /** 可选时间窗（UTC ms），透传后端 start_time/end_time */
+        endTime?: number;
+        /** 可选作者过滤，透传后端 authorUuid */
+        authorUuid?: string;
+    }): Promise<Page<StoryCard>>;
+    /**
+     * GET /v1/embed/topic/{name}/my-stories
+     * 当前 embed user 在本话题下的作品：kind=favored（收藏）/ created（投稿）。
+     * 匿名（无 embed token）返回空 Page（list=[]、hasNext=false），不抛错、不 401。
+     */
+    listMyStories(name: string, query: {
+        kind: MyStoryKind;
+        pageIndex?: number;
+        pageSize?: number;
     }): Promise<Page<StoryCard>>;
     /** GET /v1/embed/topic/{name}/characters */
     listCharacters(name: string, query: {
@@ -276,7 +294,7 @@ interface SDKNav {
      * - **per-item 路由** `/oc` `/user` `/collection/interaction`：参数指向「具体某个」实体，
      *   **必须传 `uuid`**（来自被点卡片的数据，SDK 无从代填）。
      *
-     * guest 上下文（仅本地 dev 无宿主时）内部转 openApp 深链；生产入口恒为宿主内嵌，唤起 App 由宿主承载。
+     * guest 上下文（仅本地 dev 无宿主时）本地 dev 无宿主仅 console 提示，不跳转；生产入口恒为宿主内嵌，唤起 App 由宿主承载。
      */
     internal(route: "/topic" | "/tag" | "/activity" | "/ranking" | "/generate", query?: Record<string, string | number>): Promise<void>;
     internal(route: "/oc" | "/user" | "/collection/interaction", query: {
@@ -421,4 +439,4 @@ declare class UnsupportedError extends Error {
  */
 declare function createTopicSDK(options?: TopicSDKOptions): Promise<TopicSDK>;
 
-export { type AllowedRoute, BridgeClient, type BridgeClient$1 as BridgeClientType, BridgeError, type CampaignCard, Capability, type CharacterCard, type ClientContext, type CreatorCard, type HelloResult, type HighlightPage, type Leaderboard, type LoreEvent, type Page, PageCursor, type RankEntity, type RankEntry, type RankWindow, type RichText, type SDKActivity, type SDKAuth, type SDKEvents, type SDKNav, type SDKRank, type SDKTopic, type SDKUi, type StoryCard, TopicApiError, type TopicDetail, type TopicSDK, type TopicSDKOptions, type TopicTab, UnsupportedError, type ViewportInfo, createTopicSDK };
+export { type AllowedRoute, BridgeClient, type BridgeClient$1 as BridgeClientType, BridgeError, type CampaignCard, Capability, type CharacterCard, type ClientContext, type CreatorCard, type HelloResult, type HighlightPage, type Leaderboard, type LoreEvent, type MyStoryKind, type Page, PageCursor, type RankEntity, type RankEntry, type RankWindow, type RichText, type SDKActivity, type SDKAuth, type SDKEvents, type SDKNav, type SDKRank, type SDKTopic, type SDKUi, type StoryCard, TopicApiError, type TopicDetail, type TopicSDK, type TopicSDKOptions, type TopicTab, UnsupportedError, type ViewportInfo, createTopicSDK };

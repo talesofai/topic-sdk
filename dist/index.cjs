@@ -340,8 +340,24 @@ var SDKTopicImpl = class {
     return apiFetch(this._baseUrl, `/v1/embed/topic/${encodeURIComponent(name)}/stories`, this._auth, {
       pageIndex: query.pageIndex,
       pageSize: query.pageSize,
-      sort: query.sort
+      sort: query.sort,
+      // 可选参数：undefined 时 apiFetch 会跳过，不写入 query。
+      startTime: query.startTime,
+      endTime: query.endTime,
+      authorUuid: query.authorUuid
     });
+  }
+  async listMyStories(name, query) {
+    return apiFetch(
+      this._baseUrl,
+      `/v1/embed/topic/${encodeURIComponent(name)}/my-stories`,
+      this._auth,
+      {
+        kind: query.kind,
+        pageIndex: query.pageIndex,
+        pageSize: query.pageSize
+      }
+    );
   }
   async listCharacters(name, query) {
     return apiFetch(
@@ -624,68 +640,6 @@ var SDKEventsImpl = class {
   }
 };
 
-// src/guest.ts
-var STORE_FALLBACK_URL = "https://nieta.volctrack.com/a/GQTYqugN";
-var SCHEME_TIMEOUT_MS = 2e3;
-var ALLOWED_ROUTES = /* @__PURE__ */ new Set([
-  "/tag",
-  "/topic",
-  "/activity",
-  "/ranking",
-  "/collection/interaction",
-  "/oc",
-  "/user",
-  "/generate"
-]);
-function isSuckBrowser() {
-  const ua = navigator.userAgent.toLowerCase();
-  return /micromessenger|qq\//.test(ua);
-}
-function buildQuery(query) {
-  if (!query || Object.keys(query).length === 0)
-    return "";
-  const params = new URLSearchParams();
-  for (const [k, v] of Object.entries(query)) {
-    params.set(k, String(v));
-  }
-  return params.toString();
-}
-var GuestOpenAppImpl = class {
-  openApp(route, query) {
-    if (!ALLOWED_ROUTES.has(route)) {
-      throw new Error(`[topic-sdk] route '${route}' is not in AllowedRoute whitelist`);
-    }
-    if (isSuckBrowser()) {
-      this._showSuckBrowserGuide();
-      return;
-    }
-    const qs = buildQuery(query);
-    const schemeUrl = qs ? `nieta://app${route}?${qs}` : `nieta://app${route}`;
-    let fallen = false;
-    const timer = setTimeout(() => {
-      if (fallen)
-        return;
-      fallen = true;
-      window.location.href = STORE_FALLBACK_URL;
-    }, SCHEME_TIMEOUT_MS);
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "hidden") {
-        fallen = true;
-        clearTimeout(timer);
-        document.removeEventListener("visibilitychange", onVisibilityChange);
-      }
-    };
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    window.location.href = schemeUrl;
-  }
-  _showSuckBrowserGuide() {
-    const message = "\u8BF7\u5728\u7CFB\u7EDF\u6D4F\u89C8\u5668\uFF08Safari / Chrome\uFF09\u4E2D\u6253\u5F00\u672C\u9875\u9762\uFF0C\u518D\u70B9\u51FB\u300C\u6253\u5F00 App\u300D\u3002\u5FAE\u4FE1/QQ \u5185\u7F6E\u6D4F\u89C8\u5668\u65E0\u6CD5\u76F4\u63A5\u5524\u8D77 App\u3002";
-    if (typeof window !== "undefined" && typeof window.alert === "function") {
-      window.alert(message);
-    }
-  }
-};
-
 // src/nav.ts
 var SELF_PARAM_FROM_URL = {
   "/topic": { param: "hashtag", urlKey: "hashtag" },
@@ -702,7 +656,6 @@ var SDKNavImpl = class {
   constructor(_bridge, _context) {
     this._bridge = _bridge;
     this._context = _context;
-    this._guestOpenApp = new GuestOpenAppImpl();
   }
   /**
    * 解析最终 query：自指路由缺参从 URL 自动填；per-item 路由缺必需参数则抛错（开发期就被打回，而非线上白屏）。
@@ -727,7 +680,7 @@ var SDKNavImpl = class {
   async internal(route, query) {
     const effectiveQuery = this._resolveQuery(route, query);
     if (this._context === "guest") {
-      this._guestOpenApp.openApp(route, effectiveQuery);
+      console.info("[topic-sdk] nav.internal(route) \u672C\u5730 dev \u65E0\u5BBF\u4E3B\u4E0D\u8DF3\u8F6C;\u751F\u4EA7\u7531\u5BBF\u4E3B\u5524\u8D77/\u7AD9\u5185\u8DF3");
       return;
     }
     if (!this._bridge) {

@@ -372,12 +372,12 @@ async function main() {
   info("执行 tsc --noEmit（类型门）...");
   execSync("pnpm exec tsc --noEmit", { cwd: PROJECT_ROOT, stdio: "inherit" });
 
-  // 2b) build（把 base_url 注入 VITE_OSS_BASE）
-  info("执行 vite build（base 注入 VITE_OSS_BASE）...");
+  // 2b) build（把 base_url 注入 VITE_OSS_BASE；apiBase 注入 VITE_API_BASE，与 buildHtmlCsp 同源）
+  info("执行 vite build（base 注入 VITE_OSS_BASE / VITE_API_BASE）...");
   execSync("pnpm exec vite build", {
     cwd: PROJECT_ROOT,
     stdio: "inherit",
-    env: { ...process.env, VITE_OSS_BASE: base_url },
+    env: { ...process.env, VITE_OSS_BASE: base_url, VITE_API_BASE: apiBase },
   });
 
   // 3) 本地预检

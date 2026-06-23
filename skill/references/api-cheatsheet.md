@@ -8,7 +8,7 @@
 import { createTopicSDK } from '@talesofai/topic-sdk';
 
 const sdk = await createTopicSDK({
-  apiBaseUrl?: string,         // 默认 'https://api.talesofai.cn'
+  apiBaseUrl?: string,         // 默认 'https://pre.api.talesofai.cn'（pre 测期间临时默认，上线前回退）
   helloTimeout?: number,       // hello 握手超时 ms，默认 1500
   tokenTimeout?: number,       // getEmbedToken 超时 ms，默认 3000（勿设 500）
   tokenRefreshEarlyMs?: number,// 过期前多久重取，默认 5*60*1000
@@ -167,7 +167,7 @@ interface CreatorCard {
 
 ## 鉴权 / token 模型
 
-- embed token = **60 天无状态 JWT**（`token_type='embed'`，不可吊销，残留风险已知接受）。
+- embed token = **7 天无状态 JWT**（`token_type='embed'`，不可吊销，残留风险已知接受）。
 - 数据端点：embed token 无效/过期时**降级匿名返 200**（`viewer=null`），**不返回 401**。
 - re-exchange 由 **expiresAt 临近过期 + `tokenChanged` 事件**驱动（SDK 内部自动），不由数据请求 401 触发。
 - 宿主 `getEmbedToken` bridge 回包 = `{ embedToken, expiresAt }`（对齐后端 `EmbedTokenResponse.embedToken`）。

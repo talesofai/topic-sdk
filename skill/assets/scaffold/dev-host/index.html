@@ -29,7 +29,7 @@
     </div>
     <div id="panel">
       <div id="ctrls">
-        <label>hashtag <input id="hashtag" value="梦境列车" size="12" /></label>
+        <label>hashtag <input id="hashtag" value="" placeholder="填你自己的话题名" size="12" /></label>
         <label>embedToken(空=游客) <input id="token" placeholder="可留空" size="16" /></label>
         <button id="reload">挂载/重载</button>
         <button id="evtToken">推 tokenChanged</button>
@@ -95,8 +95,14 @@
         });
 
         function mount() {
+          var raw = document.getElementById("hashtag").value.trim();
+          if (!raw) {
+            // 空 hashtag 不自动挂载（避免页面拿空话题名报错），提示创作者先填话题名。
+            log("err", "请先在上方 hashtag 输入框填你自己的话题名，再点「挂载/重载」。");
+            return;
+          }
           ctxEl.textContent = "未握手";
-          var h = encodeURIComponent(document.getElementById("hashtag").value.trim());
+          var h = encodeURIComponent(raw);
           frame.src = "/?hashtag=" + h + "&_t=" + Date.now();
           log("evt", "挂载 iframe: /?hashtag=" + h);
         }

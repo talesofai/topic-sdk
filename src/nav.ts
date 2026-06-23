@@ -1,7 +1,6 @@
 import type { BridgeClient } from "./bridge.js";
 import { UnsupportedError } from "./errors.js";
-import { GuestOpenAppImpl } from "./guest.js";
-import type { AllowedRoute, ClientContext, GuestOpenApp as IGuestOpenApp, SDKNav } from "./types.js";
+import type { AllowedRoute, ClientContext, SDKNav } from "./types.js";
 
 /**
  * 自指路由：参数=「当前这个」，缺省时 SDK 从当前页 URL 自动填（创作者可显式覆盖）。
@@ -23,14 +22,10 @@ const REQUIRED_PARAMS: Partial<Record<AllowedRoute, readonly string[]>> = {
 const isBlank = (v: unknown): boolean => v === undefined || v === null || v === "";
 
 export class SDKNavImpl implements SDKNav {
-  private readonly _guestOpenApp: IGuestOpenApp;
-
   public constructor(
     private readonly _bridge: BridgeClient | null,
     private readonly _context: ClientContext,
-  ) {
-    this._guestOpenApp = new GuestOpenAppImpl();
-  }
+  ) {}
 
   /**
    * 解析最终 query：自指路由缺参从 URL 自动填；per-item 路由缺必需参数则抛错（开发期就被打回，而非线上白屏）。
@@ -61,8 +56,8 @@ export class SDKNavImpl implements SDKNav {
   public async internal(route: AllowedRoute, query?: Record<string, string | number>): Promise<void> {
     const effectiveQuery = this._resolveQuery(route, query);
     if (this._context === "guest") {
-      // guest（仅本地 dev 无宿主）：转为 openApp 深链
-      this._guestOpenApp.openApp(route, effectiveQuery);
+      // guest（仅本地 dev 无宿主）：_resolveQuery 已先跑（保留缺参 throw）；无宿主不跳转，生产由宿主唤起 / 站内跳。
+      console.info("[topic-sdk] nav.internal(route) 本地 dev 无宿主不跳转;生产由宿主唤起/站内跳");
       return;
     }
     if (!this._bridge) {

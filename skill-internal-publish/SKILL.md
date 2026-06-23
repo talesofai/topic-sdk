@@ -110,6 +110,7 @@ pnpm deploy:prod
 - **查当前绑定 + 历史版本**：`GET <base>/v1/topic-embed/activities/<uuid>/embed-page/versions` → `{enabled, active_version, versions[]}`。
 - **切换到已有草稿版本**（无需重传）：`POST .../embed-page/activate` body `{"version": N}`（N 须在 versions[] 里且 OSS 目录仍在）。
 - **下线内嵌页**（`/tag` 回落原生页，版本记录保留可再启用）：`POST .../embed-page/unbind`。
+  > **caveat**：unbind 后**原 active 版本失去 active 保护**，可能被下一次 `publish` 的版本 GC（超出保留上限的旧版本 OSS 目录会被清理）顺带删掉 OSS 文件；届时再 `activate` 该版本会因 OSS 目录不存在而失败，需**重新发布**（重跑 `deploy:prod`）。"保留可再启用"非无限期保证。
 - **发新版本**：重跑 `pnpm deploy:prod`，脚本自增版本并自动激活；超出保留上限（默认 5 个）的旧版本 OSS 目录会被清理。
 
 ---

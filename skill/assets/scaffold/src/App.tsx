@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TopicApiError, type StoryCard, type TopicDetail, type TopicSDK } from "@talesofai/topic-sdk";
+import { type StoryCard, type TopicDetail, type TopicSDK } from "@talesofai/topic-sdk";
 import { getHashtag, getSdk } from "./sdk";
 
 /**
@@ -43,7 +43,9 @@ export function App() {
         setStories(page.list);
       } catch (e) {
         if (cancelled) return;
-        setError(e instanceof TopicApiError ? `${e.statusCode} ${e.message}` : String(e));
+        // 终端用户看友好文案；原始错误（statusCode/message/stack）降级到 console 供排查。
+        console.error("[topic-page] 数据加载失败：", e);
+        setError("内容加载失败，请稍后重试。");
       }
     })();
     return () => {
@@ -66,11 +68,10 @@ export function App() {
           这里【不要】加 position:sticky/fixed，也【不要】放 返回/分享 图标按钮（D9）。 */}
       <div>
         <h1>{detail.title ?? detail.hashtagName}</h1>
-        <p style={{ color: "#888", fontSize: 12 }}>
-          上下文：{sdk.env.context}
-          {/* startTime 可空 → 判空再用 */}
-          {detail.startTime != null && ` · 开始：${new Date(detail.startTime).toLocaleDateString()}`}
-        </p>
+        {/* startTime 可空 → 判空再用 */}
+        {detail.startTime != null && (
+          <p style={{ color: "#888", fontSize: 12 }}>开始：{new Date(detail.startTime).toLocaleDateString()}</p>
+        )}
       </div>
 
       <section style={{ display: "grid", gap: 12, marginTop: 12 }}>

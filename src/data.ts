@@ -7,6 +7,7 @@ import type {
   HotStoryCard,
   Leaderboard,
   LoreEvent,
+  MyStoryKind,
   Page,
   RankEntity,
   RankWindow,
@@ -96,13 +97,40 @@ export class SDKTopicImpl implements SDKTopic {
       pageIndex: number;
       pageSize: number;
       sort: "hot" | "like_count" | "highlight_mark_time";
+      startTime?: number;
+      endTime?: number;
+      authorUuid?: string;
     },
   ): Promise<Page<StoryCard>> {
     return apiFetch<Page<StoryCard>>(this._baseUrl, `/v1/embed/topic/${encodeURIComponent(name)}/stories`, this._auth, {
       pageIndex: query.pageIndex,
       pageSize: query.pageSize,
       sort: query.sort,
+      // 可选参数：undefined 时 apiFetch 会跳过，不写入 query。
+      startTime: query.startTime,
+      endTime: query.endTime,
+      authorUuid: query.authorUuid,
     });
+  }
+
+  public async listMyStories(
+    name: string,
+    query: {
+      kind: MyStoryKind;
+      pageIndex?: number;
+      pageSize?: number;
+    },
+  ): Promise<Page<StoryCard>> {
+    return apiFetch<Page<StoryCard>>(
+      this._baseUrl,
+      `/v1/embed/topic/${encodeURIComponent(name)}/my-stories`,
+      this._auth,
+      {
+        kind: query.kind,
+        pageIndex: query.pageIndex,
+        pageSize: query.pageSize,
+      },
+    );
   }
 
   public async listCharacters(

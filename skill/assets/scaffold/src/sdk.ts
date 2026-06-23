@@ -6,6 +6,9 @@ let _sdkPromise: Promise<TopicSDK> | null = null;
 export function getSdk(): Promise<TopicSDK> {
   if (!_sdkPromise) {
     _sdkPromise = createTopicSDK({
+      // prod 由 deploy.mjs 注入 VITE_API_BASE（与 CSP 同源）；dev 缺省回退 window.location.origin
+      // 走 vite 的 /v1 proxy 避免 CORS。注意：不能回退空串，否则 data.ts 的 new URL(path, baseUrl) 会抛错。
+      apiBaseUrl: import.meta.env.VITE_API_BASE || window.location.origin,
       tokenTimeout: 3000, // 默认 3000，勿设 500（v1 bridge 历史坏值）
       onAuthLost: (reason) => {
         // token 不可恢复时：只做匿名降级 + 日志，不抛错、不阻塞渲染

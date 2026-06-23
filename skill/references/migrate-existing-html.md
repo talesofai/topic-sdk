@@ -43,7 +43,7 @@
 - **判定**：HTML/CSS 里有 `src="https://外站域名/..."` 的图片/字体/媒体，或 `<link href="https://fonts.googleapis.com/...">` 等外站样式/字体，或 `<script src="https://cdn.jsdelivr.net/...">` 等外站 JS。
 - **结论**：外站**显示资源**（图片/字体/CSS/媒体）必须本地化；外站 JS 单独处理。
   - 图片/字体/媒体/CSS：下载到本地，放入 `public/assets/`，改用相对路径引用。
-  - 外站 JS（如 jQuery CDN、图表库 CDN）：①优先改用 npm 包并让 vite 打包；②若必须保留 CDN，需向运营申请加入 `script-src` 名单（见 §4 决策树条目 D3）。
+  - 外站 JS（如 jQuery CDN、图表库 CDN）：一律改用 npm 包并让 vite 打包；**无法打包的（私有 CDN、混淆 JS 等）停下来报告内部团队**——agent 不改 CSP、不替用户做安全判断（见 §4 决策树条目 D3）。
   - base64 / `data:` URI 内联的媒体（视频/音频）：必须提取为文件，放 `public/`，见 §4 决策树条目 D4。
 - **改造动作**：§3.1 → §3.4(资源本地化) → §3.2 → §3.3 → §3.6。
 
@@ -221,8 +221,8 @@ leaderboard.endTime     → 同上
 5. **base64 / `data:` URI 内联的媒体（视频/音频）**：提取 base64 数据，解码为二进制文件，保存到 `public/assets/`，改为相对路径引用。图标 SVG 可保留内联，媒体不行（见 §4 决策树 D4）。
 
 **外站 JS（CDN 引入的库）：**
-- 优先方案：`pnpm add <包名>`，把 HTML 里的 `<script src="https://cdn.jsdelivr.net/...">` 删掉，改为 `import` 语句。
-- 若无法 npm 化（如私有 CDN、混淆 JS）：必须向运营申请把该域名加入 `script-src` 名单（见 §4 决策树 D3），在 deploy.mjs 的 `buildHtmlCsp` 函数里手动添加该域；否则 CSP 会拦截，**不能上线**。
+- 唯一方案：`pnpm add <包名>`，把 HTML 里的 `<script src="https://cdn.jsdelivr.net/...">` 删掉，改为 `import` 语句，由 vite 打包进产物。
+- 若无法 npm 化（如私有 CDN、混淆 JS）：**停下来报告内部团队**，由内部判断是否可行（见 §4 决策树 D3）。**agent 不改 deploy.mjs 的 CSP、不替用户做安全判断。**
 
 **自检**：`pnpm build && pnpm preview`，Network 面板无 `net::ERR_BLOCKED_BY_CSP` 报错；页面所有图片/字体/媒体正常显示；无外站资源请求（除了已申请加白名单的 JS CDN）。
 
@@ -355,12 +355,10 @@ function navigate(view: string) { currentView = view; renderView(); }
 **例如**：页面里嵌了一个天气小组件、外部店铺 API、自己的后端。
 
 **默认处理**：
-1. 该第三方接口的域名必须加入 CSP `connect-src`（在 `deploy.mjs` 的 `buildHtmlCsp` 函数里追加）。agent 自行修改。
+1. 优先去掉该第三方接口依赖：能用 SDK 只读数据替代的（话题/作品/榜单）一律替代；纯展示的外站内容能本地化的按 §3.4 本地化。
 2. 如果该接口返回的内容要用图片展示（外站图床）→ 见 §3.4 资源本地化。
 3. 该接口不能持有用户 x-token，不能做写操作，只能纯读/展示。
-4. 确认无法去掉该接口依赖后，在 deploy.mjs CSP 里追加该域名，继续改造。
-
-**必须问用户**：「这里有个对外接口 `https://xxx.com/api/...`，请确认：它是你自己的后端服务吗？它不需要用户登录信息，对吗？」
+4. 若确实无法去掉该外站接口依赖（需放宽 CSP `connect-src`）：**停下来报告内部团队**，由内部判断是否信任该来源并放行——**agent 不改 deploy.mjs 的 CSP、不替用户做安全判断**。
 
 ---
 
@@ -381,9 +379,8 @@ function navigate(view: string) { currentView = view; renderView(); }
 **例如**：`<script src="https://unpkg.com/some-lib@1.0.0/dist/lib.min.js">`，该库没有 npm 版本或有特殊原因必须用 CDN。
 
 **默认处理**：
-1. 在改造文档里记录该依赖（不是 agent 要做的文档，是在 `README` 或注释里注明）。
-2. 修改 `deploy.mjs` 的 `buildHtmlCsp` 函数，在 `script-src` 里追加该 CDN 域名。
-3. **必须向用户说明**（不是技术问题，是安全/合规问题）：「页面使用了来自 `unpkg.com` 的第三方 JS 库，这会放宽安全限制。请确认：① 你信任该 JS 来源 ② 已告知运营审批。如果不确定，我可以帮你把它打包进产物，不走外站 CDN。」
+1. 优先：`pnpm add <包名>` 把它打包进产物，删掉外站 `<script src>`，改 `import`。绝大多数 CDN 库都有 npm 版本。
+2. 若确实无法 npm 化（私有 CDN、混淆 JS、无 npm 版本）：**停下来报告内部团队**——这需要放宽 `script-src` CSP，属安全/合规判断，由内部团队评估是否信任并放行。**agent 不改 deploy.mjs 的 CSP、不问用户做安全判断。**
 
 ---
 

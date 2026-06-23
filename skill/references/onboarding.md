@@ -70,6 +70,7 @@
 - **查当前绑定 + 历史版本**:`GET <base>/v1/topic-embed/activities/<uuid>/embed-page/versions` → 返回 `{enabled, active_version, versions[]}`。
 - **回滚 / 切到某历史版本**(无需重传):`POST <base>/v1/topic-embed/activities/<uuid>/embed-page/activate`,body `{"version": N}`(N 必须在 versions 里且其 OSS 目录还在)。
 - **下线内嵌页**(`/tag` 回落原生话题页,版本记录保留可再启用):`POST <base>/v1/topic-embed/activities/<uuid>/embed-page/unbind`。
+  > **caveat**:unbind 后**原 active 版本失去 active 保护**——它可能被下一次 `publish` 的版本 GC（超出保留上限的旧版本 OSS 目录会被清理）顺带删掉 OSS 文件。届时再 `activate` 该版本会因 OSS 目录不存在而失败，需要**重新发布**（重跑 deploy）。所以"保留可再启用"不是无限期保证。
 - **发新版本**:重跑 `pnpm deploy:prod`（内部团队在发布项目里执行），deploy 脚本自增版本号并自动绑为新生效版;超出保留上限(默认 5 个)的旧版本 OSS 目录会被清理。
 
 > 多话题各自独立(一个活动一份绑定),没有批量接口;发布权限仅限内部员工（`is_internal`）。
@@ -78,6 +79,6 @@
 | 现象 | 多半原因 |
 |---|---|
 | `pnpm install` 拉 topic-sdk 失败（网络错误） | 网络问题，检查 `git ls-remote https://github.com/talesofai/topic-sdk.git` 是否通 |
-| 上线时 `upload-grant` 返回 403 | 操作者账号不是 `is_internal` / activity 不是 PUBLISHED（见内部发布 runbook） |
+| 上线时 `upload-grant` 返回 403 | 操作者账号不是 `is_internal` / activity 不是 PUBLISHED（见内部发布 runbook：topic-sdk 仓库根的 `skill-internal-publish/`） |
 | 页面上线后在 App 里点登录/跳转没反应 | 运维没把 OSS 域加进 `origin-whitelist`(见 A3) |
 | 上线时 `publish` 报 `missing index.html` | 构建没产出入口文件(内部团队排查构建输出) |

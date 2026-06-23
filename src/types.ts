@@ -271,6 +271,9 @@ export interface SDKAuth {
   isAuthenticated(): boolean;
 }
 
+/** listMyStories 的 kind：favored=当前 user 收藏的本话题作品；created=当前 user 在本话题投稿的作品。 */
+export type MyStoryKind = "favored" | "created";
+
 export interface SDKTopic {
   /** GET /v1/embed/topic/{name} */
   getDetail(name: string): Promise<TopicDetail>;
@@ -282,6 +285,26 @@ export interface SDKTopic {
       pageIndex: number;
       pageSize: number;
       sort: "hot" | "like_count" | "highlight_mark_time";
+      /** 可选时间窗（UTC ms），透传后端 start_time/end_time */
+      startTime?: number;
+      /** 可选时间窗（UTC ms），透传后端 start_time/end_time */
+      endTime?: number;
+      /** 可选作者过滤，透传后端 authorUuid */
+      authorUuid?: string;
+    },
+  ): Promise<Page<StoryCard>>;
+
+  /**
+   * GET /v1/embed/topic/{name}/my-stories
+   * 当前 embed user 在本话题下的作品：kind=favored（收藏）/ created（投稿）。
+   * 匿名（无 embed token）返回空 Page（list=[]、hasNext=false），不抛错、不 401。
+   */
+  listMyStories(
+    name: string,
+    query: {
+      kind: MyStoryKind;
+      pageIndex?: number;
+      pageSize?: number;
     },
   ): Promise<Page<StoryCard>>;
 
@@ -359,7 +382,7 @@ export interface SDKNav {
    * - **per-item 路由** `/oc` `/user` `/collection/interaction`：参数指向「具体某个」实体，
    *   **必须传 `uuid`**（来自被点卡片的数据，SDK 无从代填）。
    *
-   * guest 上下文（仅本地 dev 无宿主时）内部转 openApp 深链；生产入口恒为宿主内嵌，唤起 App 由宿主承载。
+   * guest 上下文（仅本地 dev 无宿主时）本地 dev 无宿主仅 console 提示，不跳转；生产入口恒为宿主内嵌，唤起 App 由宿主承载。
    */
   internal(
     route: "/topic" | "/tag" | "/activity" | "/ranking" | "/generate",
@@ -397,14 +420,6 @@ export interface SDKEvents {
   on(event: "viewport", handler: (info: ViewportInfo) => void): () => void;
   on(event: "back", handler: (ev: { preventDefault(): void }) => void): () => void;
   off(event: string, handler: (...args: unknown[]) => void): void;
-}
-
-/**
- * SDK 内部用：guest 上下文（仅本地 dev 无宿主时可达）下 nav.internal 的深链兜底实现。
- * **不**挂在公开的 `TopicSDK` 上——生产入口恒为宿主内嵌，创作者一律用 `sdk.nav.internal`，唤起 App 由宿主承载。
- */
-export interface GuestOpenApp {
-  openApp(route: AllowedRoute, query?: Record<string, string | number>): void;
 }
 
 // ————— SDK 顶层 —————

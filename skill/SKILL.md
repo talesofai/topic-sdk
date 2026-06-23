@@ -21,6 +21,8 @@ description: >-
 
 做内嵌话题页，你（创作者）只要说清楚**业务内容**（话题要展示什么、按钮点了跳哪里），技术活全交给 agent。
 
+> **前置条件（开工前先确认）**：内嵌页**绑定 activity**（发布/上线都以 `activity_uuid` 为锚）。**纯 hashtag 话题（无对应 activity）暂不支持内嵌页**（owner TODO）。所以开工前先确认你的话题有 `activity_uuid`；没有的话目前做不了内嵌页，先停下。
+
 > **发布模型（权限分级，后端强制）**：
 > - **创作者 → 只能 dev**：用绑定该话题活动的 dev 令牌 + `pnpm deploy:dev` 发**草稿**（不上线），在 app 内用开发者菜单挑这个版本调试；满意后**请内部团队**上线。**创作者永不能 prod。**
 > - **内部用户（`is_internal`）→ 可 prod + dev**：用完整登录态 `pnpm deploy:prod` 上线（激活绑定），也可发 dev 草稿。
@@ -89,6 +91,7 @@ description: >-
 
 - `sdk.nav.internal(route, query?)`：跳产品内页，`route` 必须在 AllowedRoute 白名单内（见 cheatsheet）。**这是唯一的跳转/写意图漏斗**——没有 `sdk.guest.openApp`，唤起 App 由宿主承载（手机浏览器宿主自动唤起 App；原生 App 内站内跳；桌面站内跳）。
 - **参数契约**：自指路由（`/topic` `/tag` `/activity`）省略参数时 SDK 自动从当前页 URL 填；per-item 路由（`/oc` `/user` `/collection/interaction`）必须传 `uuid`（来自被点卡片）。**漏传/传错会被 SDK 拦下（构建期类型 + 运行期 throw），不会静默白屏**——详见 cheatsheet 参数表。
+  > **caveat**：「拦下不静默白屏」**仅对你显式调用 `sdk.nav.internal(...)` 成立**。如果你写的是原生 `<a href="...">`，SDK 的链接拦截器会接管它并 per-item 调 `nav.internal`，但调用挂了 `.catch(() => {})`——缺 `uuid` 抛的错会被**静默吞掉**（不抛、无提示）。所以 per-item 跳转（作品/角色/用户详情）**务必显式写 `sdk.nav.internal('/oc', { uuid })`**，不要依赖原生 `<a>` 自动拦截来传 per-item 参数。
 - `sdk.nav.external(url)`：外跳（embedded 走 bridge；guest 走 `window.open`）。
 
 **校验门**：所有 `nav.internal` 的 route 都在白名单内；**per-item** 写意图（点赞/关注/收藏/看详情）一律走 `nav.internal` 跳原生页/由宿主唤起 App，**绝不在页面内尝试本地写**。注意区分:**页面级**的 返回/分享/主页/登录/举报 **一概不画**（宿主顶栏已提供,D9）——别把"承载 per-item 写意图"误推广成"画一排导航/分享按钮"。
@@ -166,7 +169,7 @@ pnpm deploy:dev
 
 ### 7.6 请内部上线
 
-调试满意后，将项目源码（不含 `node_modules/`、`dist/`）交给内部团队。内部团队用 `skill-internal-publish/` 里的流程（`pnpm deploy:prod`）完成上线。
+调试满意后，将项目源码（不含 `node_modules/`、`dist/`）交给内部团队。内部团队用 `skill-internal-publish/`（位于 **topic-sdk 仓库根**，不随创作者项目交付）里的流程（`pnpm deploy:prod`）完成上线。
 
 > **创作者只能 dev（发草稿），永不能 prod（上线）。**
 > 后端 `target=prod` / `activate` / `unbind` 仅接受 `is_internal` 完整登录态，scoped dev 令牌请求时直接被拒（403）。
@@ -192,7 +195,7 @@ pnpm deploy:dev
 
 创作者产出：**一个能本地 `pnpm dev` 预览 + `pnpm deploy:dev` 已发草稿 + 通过合规自测的项目**。
 
-交付方式：将项目源码（不含 `node_modules/`、不含 `dist/`）打包或推送 git 仓库，**交给内部团队**。内部团队会用 `skill-internal-publish/` 里的发布流程完成最终上线。
+交付方式：将项目源码（不含 `node_modules/`、不含 `dist/`）打包或推送 git 仓库，**交给内部团队**。内部团队会用 `skill-internal-publish/`（位于 **topic-sdk 仓库根**，不随创作者项目交付）里的发布流程完成最终上线。
 
 ---
 

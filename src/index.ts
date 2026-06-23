@@ -22,6 +22,7 @@ export type {
   Leaderboard,
   // 世界观
   LoreEvent,
+  MyStoryKind,
   // 通用
   Page,
   RankEntity,
