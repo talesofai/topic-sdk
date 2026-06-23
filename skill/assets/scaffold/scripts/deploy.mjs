@@ -225,14 +225,41 @@ function scanPageSourceForViolations() {
   ];
   const OSS_RE = /oss\.talesofai\.cn/;
   const OSS_VISIBLE_RE = /<a[\s>]|href\s*=|textContent|innerHTML|innerText/;
+  // 自绘宿主 chrome 的启发式检测（D9）：宿主顶栏/固定浮层已提供 返回/分享/主页/登录/举报 + 安全区，
+  // 页面自绘会与宿主重复/冲突。这是 UX 红线、非安全边界，且会误伤合法吸顶筛选条 / 正文含"分享"二字，
+  // 故只 warn（不 fail）；确系合法可在该行加 sdk-compliance-ok 豁免。命中行 warn 用以下规则，
+  // "position:fixed/sticky + top:0" 常跨行写，故按整文件文本判（见下方 fileText）。
+  const CHROME_LINE_RULES = [
+    {
+      re: /(?:<button|onClick|aria-label|role\s*=\s*["']button["'])[^\n]*(?:返回|分享|主页|首页|举报)|(?:返回|分享|主页|首页|举报)[^\n]*(?:<button|onClick|aria-label)/,
+      msg: "疑似自绘宿主已提供的按钮（返回/分享/主页/举报）——这些在宿主顶栏，页面别画（D9）",
+    },
+    {
+      re: /env\(\s*safe-area-inset-top|(?:padding-top|paddingTop)[^\n]*safe-area-inset/i,
+      msg: "疑似自加顶部安全区内边距——宿主已占，sdk.ui.viewport().safeTop 恒为 0（D9/§0.6）",
+    },
+  ];
   const violations = [];
+  const warnings = [];
   for (const f of collectPageSourceFiles()) {
-    const lines = readFileSync(f.fullPath, "utf8").split(/\r?\n/);
+    const text = readFileSync(f.fullPath, "utf8");
+    const lines = text.split(/\r?\n/);
+    // 文件级：position:fixed/sticky + top:0 常分行写，按整文件文本判（命中即疑似自绘固定顶栏）。
+    if (
+      !text.includes("sdk-compliance-ok") &&
+      /position\s*:\s*["']?(?:fixed|sticky)/.test(text) &&
+      /\btop\s*:\s*["']?0\b/.test(text)
+    ) {
+      warnings.push(`${f.relKey} 疑似自绘固定顶栏（position:fixed/sticky + top:0）——宿主顶栏已提供 返回/分享/主页，页面别画顶栏（D9）`);
+    }
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       if (line.includes("sdk-compliance-ok")) continue;
       for (const { re, msg } of RULES) {
         if (re.test(line)) violations.push(`${f.relKey}:${i + 1} ${msg}`);
+      }
+      for (const { re, msg } of CHROME_LINE_RULES) {
+        if (re.test(line)) warnings.push(`${f.relKey}:${i + 1} ${msg}`);
       }
       if (OSS_RE.test(line) && OSS_VISIBLE_RE.test(line)) {
         violations.push(`${f.relKey}:${i + 1} oss.talesofai.cn 出现在可见引用（<a>/文案）；对外身份须用 app.nieta.art/tag?hashtag=X`);
@@ -245,6 +272,11 @@ function scanPageSourceForViolations() {
         violations.join("\n  - ") +
         `\n请修正后重跑。确系合法同源用途的个别行可在行内加注释 sdk-compliance-ok 豁免（需内部 review）。`,
     );
+  }
+  if (warnings.length) {
+    console.log(`\n[deploy] ⚠ 自绘宿主 chrome 警告（D9，非硬门，但极可能违规，请逐条核对 compliance §B）：`);
+    for (const w of warnings) console.log(`    - ${w}`);
+    console.log(`[deploy] ⚠ 页面只渲染可滚动内容，返回/分享/主页/登录/举报/安全区全在宿主。若确系合法（吸顶二级筛选 tab / 正文含"分享"二字），在该行加 sdk-compliance-ok 豁免可消除此警告。\n`);
   }
   info("源码合规扫描通过。");
 }

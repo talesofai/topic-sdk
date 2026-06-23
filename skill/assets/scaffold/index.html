@@ -24,6 +24,8 @@
     </style>
   </head>
   <body>
+    <!-- 页面只渲染「可滚动内容区」。宿主顶栏已提供 返回/分享/主页/开发者菜单/登录/举报 + 安全区，
+         页面【禁止】：position:fixed|sticky 顶部条、返回/分享/主页按钮、env(safe-area-inset-*) 内边距（D9，自绘会与宿主重复/冲突）。 -->
     <div id="root"></div>
     <!-- 注意：禁用 history.pushState（用 hash/内存路由），否则 Android 返回键会先消费 iframe 内 history -->
     <script type="module" src="/src/main.tsx"></script>

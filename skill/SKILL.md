@@ -39,7 +39,12 @@ description: >-
 ## 0. 先读死规矩（贯穿全程，违反即返工）
 
 1. **只读 + 不持写权**：页面只调 `/v1/embed/*` 只读接口，只持 `embed token`（`token_type='embed'`）。**绝不**持有/存储/传递用户的 `x-token`。
-2. **宿主顶栏 + 写动作全在宿主**（D9）：宿主顶栏/固定浮层**已提供**「**返回 / 分享 / 主页(一键回内嵌页首页) / 开发者菜单(仅授权用户)**」+ 登录/举报——**页面绝不自绘这些**(返回、分享、主页、登录、举报等),自绘会与宿主重复/冲突。SDK **不暴露** `overlay.*` 写方法。点赞/关注/收藏这类 per-item 写 → `sdk.nav.internal('/collection/interaction', {uuid})` 点卡跳原生页去做。
+2. **宿主顶栏 + 写动作全在宿主**（D9）：宿主顶栏/固定浮层**已提供**「**返回 / 分享 / 主页(一键回内嵌页首页) / 开发者菜单(仅授权用户)**」+ 登录/举报——**页面绝不自绘这些**(返回、分享、主页、登录、举报等),自绘会与宿主重复/冲突。SDK **不暴露** `overlay.*` 写方法。点赞/关注/收藏这类 per-item 写 → `sdk.nav.internal('/collection/interaction', {uuid})` 点卡跳原生页去做。**页面骨架 = 只渲染「可滚动内容区」**：标题块、卡片/列表/瀑布流——**不画顶栏、不画固定头、不加安全区内边距**（看代码形状对照,LLM 容易顺着模板长出顶栏,务必照 ✅ 那行长）：
+   ```
+   ✅ 正确(只内容,可滚动):     <div>{title}</div><section>…卡片列表…</section>
+   ❌ 错误(自绘顶栏=与宿主重复): <div style="position:fixed;top:0">← 返回   分享🔗   🏠主页</div>
+   ❌ 错误(自加安全区):         padding-top: env(safe-area-inset-top)   // safeTop 宿主已占,恒为 0
+   ```
 3. **URL 统一**：对外唯一身份永远是 `app.nieta.art/tag?hashtag=X`（短链 `t.nieta.art`）。**OSS URL 是内部实现细节，永不写进分享链/`<a href>`/规范链。**
 4. **token 只在内存**：不写 `localStorage`/`sessionStorage`/`cookie`。
 5. **禁 `history.pushState`**：用 hash 路由或内存路由（否则 Android 返回键会先消费 iframe 内 history）。
@@ -86,7 +91,7 @@ description: >-
 - **参数契约**：自指路由（`/topic` `/tag` `/activity`）省略参数时 SDK 自动从当前页 URL 填；per-item 路由（`/oc` `/user` `/collection/interaction`）必须传 `uuid`（来自被点卡片）。**漏传/传错会被 SDK 拦下（构建期类型 + 运行期 throw），不会静默白屏**——详见 cheatsheet 参数表。
 - `sdk.nav.external(url)`：外跳（embedded 走 bridge；guest 走 `window.open`）。
 
-**校验门**：所有 `nav.internal` 的 route 都在白名单内；写意图（点赞/关注/登录）一律走 `nav.internal` 跳原生页/由宿主唤起 App，**绝不在页面内尝试本地写**。
+**校验门**：所有 `nav.internal` 的 route 都在白名单内；**per-item** 写意图（点赞/关注/收藏/看详情）一律走 `nav.internal` 跳原生页/由宿主唤起 App，**绝不在页面内尝试本地写**。注意区分:**页面级**的 返回/分享/主页/登录/举报 **一概不画**（宿主顶栏已提供,D9）——别把"承载 per-item 写意图"误推广成"画一排导航/分享按钮"。
 
 ## 6. 自测
 
@@ -168,7 +173,9 @@ pnpm deploy:dev
 
 ## 8. 合规门（上线前必须）
 
-**多数红线已机器兜底**：`pnpm deploy:dev/prod` 会先跑 `tsc --noEmit`（类型门：可空字段裸用 / 不存在字段 / strict 降级）+ **源码红线扫描**（localStorage/sessionStorage/cookie、`history.pushState`、ServiceWorker、写方法 fetch、`EventSource`、`window.parent.postMessage`、自设 CSP `<meta>`、OSS 可见引用、OAuth 残留）+ 单 HTML 入口校验；命中直接 fail 打回。SDK 运行期还会拦原生 `<a>` 跳转（转 bridge）、守卫 `history.pushState`（embedded 即 throw）。**你不必靠记忆遵守这些——违反会在发布/运行时当场报错。**（确系合法的同源用途，可在该行加注释 `sdk-compliance-ok` 豁免，需内部 review。）
+**多数红线已机器兜底**：`pnpm deploy:dev/prod` 会先跑 `tsc --noEmit`（类型门：可空字段裸用 / 不存在字段 / strict 降级）+ **源码红线扫描**（localStorage/sessionStorage/cookie、`history.pushState`、ServiceWorker、写方法 fetch、`EventSource`、`window.parent.postMessage`、自设 CSP `<meta>`、OSS 可见引用、OAuth 残留）+ 单 HTML 入口校验；命中直接 fail 打回。SDK 运行期还会拦原生 `<a>` 跳转（转 bridge）、守卫 `history.pushState`（embedded 即 throw）。**上面这些违反会在发布/运行时当场报错，你不必死记。**（确系合法的同源用途，可在该行加注释 `sdk-compliance-ok` 豁免，需内部 review。）
+>
+> **⚠ 唯一的例外是 D9「自绘宿主顶栏/固定浮层/安全区」**：deploy 对它只有 **best-effort 启发式 warn**（提示而**不 fail**，且会漏报——动态拼的样式、图标按钮等扫不到）。**这一条机器兜底不住,必须你自觉遵守 + 发布后真机核对**：页面只渲染可滚动内容区,返回/分享/主页/登录/举报/安全区**全在宿主**,页面一概不画（见 §0.2 D9 的正/反例)。别因为"deploy 没报错"就以为合规。
 >
 > **定位说明（重要）**：源码红线扫描是**防手滑的 lint / 纵深防御，不是安全边界**——它逐行正则匹配，可被动态构造（`window["local"+"Storage"]`）、第三方依赖夹带、`sdk-compliance-ok` 注释绕过，且只扫 `src/` 不扫 `node_modules`。**真正的安全边界在后端**：embed token 只读、`/v1/embed/*` 无写接口、token 三向隔离（embed / dev-publish / x-token），即便页面违规也拿不到写能力或 x-token。所以**别把"扫描通过"等同于"安全"**，也别据此放松后端只读约束。
 

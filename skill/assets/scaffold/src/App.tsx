@@ -2,6 +2,18 @@ import { useEffect, useState } from "react";
 import { TopicApiError, type StoryCard, type TopicDetail, type TopicSDK } from "@talesofai/topic-sdk";
 import { getHashtag, getSdk } from "./sdk";
 
+/**
+ * 页面骨架 = 只渲染「可滚动内容区」(标题块 + 卡片/列表)。这是干净正例,照它的形状长。
+ *
+ * 宿主顶栏 / 固定浮层【已提供】:返回 / 分享 / 主页(回内嵌页首页) / 开发者菜单 / 登录 / 举报,
+ * 底部安全区也由宿主处理 —— 页面【绝不】自绘这些(D9),自绘会与宿主重复 / 冲突:
+ *   ✗ 不画顶栏 / 固定头 / `position: fixed|sticky` 顶部条
+ *   ✗ 不画 返回 / 分享 / 主页 / 登录 / 举报 按钮
+ *   ✗ 不加 safeTop / `env(safe-area-inset-*)` 内边距(`sdk.ui.viewport().safeTop` 恒为 0)
+ *
+ * 页面唯一正确的写意图出口:per-item 点卡 → `sdk.nav.internal` 跳原生页(见下方 openStory)。
+ * 不要把这个出口扩成"顶栏返回 / 分享 / 主页"按钮。
+ */
 export function App() {
   const [sdk, setSdk] = useState<TopicSDK | null>(null);
   const [detail, setDetail] = useState<TopicDetail | null>(null);
@@ -42,33 +54,24 @@ export function App() {
   if (error) return <div style={{ padding: 16 }}>加载失败：{error}</div>;
   if (!sdk || !detail) return <div style={{ padding: 16 }}>加载中…</div>;
 
-  const isGuest = !sdk.env.embedded;
-
-  // per-item 写（点赞/收藏/查看）→ 跳原生作品详情页完成，页面不自绘写按钮
+  // per-item 写（点赞/收藏/查看）→ 跳原生作品详情页完成，页面不自绘写按钮。
+  // 这是页面唯一该有的写意图出口；【不要】把它扩成顶栏的 返回/分享/主页 按钮（D9）。
   const openStory = (story: StoryCard) => {
     void sdk.nav.internal("/collection/interaction", { uuid: story.storyId }).catch(() => {});
   };
 
-  // 页面级写意图：统一走 nav.internal（hashtag 由 SDK 自动填）。
-  // 游客（仅本地 dev 无宿主）内部转唤起 App；嵌入态由宿主承载（手机浏览器唤起 App / 站内跳；登录分享走宿主固定浮层，D9）。
-  const onWriteIntent = () => {
-    if (isGuest) {
-      void sdk.nav.internal("/tag").catch(() => {});
-    } else {
-      void sdk.ui.toast("请使用顶部的分享 / 登录入口", { level: "info" }).catch(() => {});
-    }
-  };
-
   return (
     <div style={{ padding: 16 }}>
-      <header>
+      {/* 内容区第一块（标题），不是顶栏。宿主已提供 返回/分享/主页，
+          这里【不要】加 position:sticky/fixed，也【不要】放 返回/分享 图标按钮（D9）。 */}
+      <div>
         <h1>{detail.title ?? detail.hashtagName}</h1>
         <p style={{ color: "#888", fontSize: 12 }}>
           上下文：{sdk.env.context}
           {/* startTime 可空 → 判空再用 */}
           {detail.startTime != null && ` · 开始：${new Date(detail.startTime).toLocaleDateString()}`}
         </p>
-      </header>
+      </div>
 
       <section style={{ display: "grid", gap: 12, marginTop: 12 }}>
         {stories.map((s) => (
@@ -93,10 +96,6 @@ export function App() {
           </button>
         ))}
       </section>
-
-      <button onClick={onWriteIntent} style={{ marginTop: 16 }}>
-        {isGuest ? "打开 App 参与" : "分享 / 登录（宿主浮层）"}
-      </button>
     </div>
   );
 }

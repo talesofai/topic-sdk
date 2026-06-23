@@ -242,11 +242,7 @@ sdk.nav.internal('/collection/interaction', { uuid: storyId })
 删除整个按钮及实现。嵌入态的分享由宿主固定浮层提供（顶部导航栏的分享图标），页面不需要也不能触发。游客态无分享按钮；若原来有分享链接，确保分享的链接是 `app.nieta.art/tag?hashtag=X`，不是 OSS URL。
 
 **登录按钮：**
-删除原来的登录流程（`localStorage` token、OAuth 跳转等）。登录由宿主承载——嵌入态走宿主固定浮层，页面不做任何事。若确需"去 App 登录"入口：
-```typescript
-// hashtag 由 SDK 自动填；手机浏览器宿主会唤起 App，本地 dev guest 同样唤起
-void sdk.nav.internal('/tag').catch(() => {});
-```
+删除原来的登录流程（`localStorage` token、OAuth 跳转等），**并删掉登录按钮本身**。登录由宿主固定浮层承载，**页面不做任何 UI**——不保留"登录""去 App 登录"之类任何按钮/入口（D9，自绘会与宿主重复）。匿名时按 §3.6 三态降级直接展示只读数据即可，不需要也不要画"去登录"的引导。
 
 **发布/评论/删除等其他写操作：**
 整块删除，没有替代（见 §4 决策树 D2）。
