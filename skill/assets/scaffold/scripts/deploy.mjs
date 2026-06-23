@@ -76,7 +76,11 @@ function info(msg) {
 function buildHtmlCsp(apiBase, baseUrl, cspAllow = {}) {
   const apiHost = new URL(apiBase).host;
   const ossHost = new URL(baseUrl).host;
-  const appOrigin = apiBase.includes("talesofai.com") ? "app.neta.art" : "app.nieta.art";
+  // frame-ancestors 的宿主 origin 必须与实际挂 iframe 的宿主环境一致,否则跨域 OSS iframe 会被
+  // CSP frame-ancestors 拒绝渲染(白屏)。pre 宿主是 pre.app.nieta.art、prod 是 app.nieta.art
+  // (.com 同理 neta.art);按 apiHost 是否 pre.* 派生,避免 pre 环境挂 iframe 被自己的 CSP 拦白屏。
+  const brand = apiBase.includes("talesofai.com") ? "app.neta.art" : "app.nieta.art";
+  const appOrigin = apiHost.startsWith("pre.") ? `pre.${brand}` : brand;
   // 把白名单某 directive 的域名规范成 https://host 形式并拼到既有指令后
   const withAllow = (directive, base) => {
     const extra = (cspAllow?.[directive] || [])

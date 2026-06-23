@@ -296,7 +296,7 @@ export interface SDKTopic {
 
   /**
    * GET /v1/embed/topic/{name}/my-stories
-   * 当前 embed user 在本话题下的作品：kind=favored（收藏）/ created（投稿）。
+   * 当前 embed user 在本话题下的作品：kind=favored（收藏）/ created（投稿）/ liked（点赞）。
    * 匿名（无 embed token）返回空 Page（list=[]、hasNext=false），不抛错、不 401。
    */
   listMyStories(
