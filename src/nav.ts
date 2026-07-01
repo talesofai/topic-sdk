@@ -76,4 +76,16 @@ export class SDKNavImpl implements SDKNav {
     }
     await this._bridge.send("nav.external", { url });
   }
+
+  public async applyHost(): Promise<void> {
+    if (this._context === "guest") {
+      // guest（仅本地 dev 无宿主）：拼 URL 需要的用户态/运营配置只有宿主本地有，dev 无宿主不跳转；生产由宿主承载。
+      console.info("[topic-sdk] nav.applyHost() 本地 dev 无宿主不跳转;生产由宿主用本地用户态拼 URL 后跳转");
+      return;
+    }
+    if (!this._bridge) {
+      throw new UnsupportedError("nav.applyHost", this._context);
+    }
+    await this._bridge.send("nav.applyHost");
+  }
 }

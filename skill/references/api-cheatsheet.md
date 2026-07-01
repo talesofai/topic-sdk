@@ -26,7 +26,7 @@ const sdk = await createTopicSDK({
 | `sdk.topic` | 话题只读数据 |
 | `sdk.activity` | 活动 tab / 精选 |
 | `sdk.rank` | 榜单 |
-| `sdk.nav` | `internal(route, query?)` / `external(url)` |
+| `sdk.nav` | `internal(route, query?)` / `external(url)` / `applyHost()` |
 | `sdk.ui` | `toast(text, opts?)` / `viewport()` |
 | `sdk.events` | `on('tokenChanged'\|'viewport'\|'back', cb)` / `off(...)` |
 | `sdk.destroy()` | 释放 |
@@ -167,10 +167,26 @@ interface CreatorCard {
 > **自指 vs per-item**：参数=「当前这个话题/活动」→ 自指，可省（SDK 自动填）；参数=「具体某个角色/用户/作品」→ per-item，必传（SDK 无从代填，漏传直接抛错）。
 >
 > 示例：`sdk.nav.internal('/topic')`（自动填当前话题）；`sdk.nav.internal('/oc', { uuid: c.uuid })`（必传）。
+>
+> **跳到另一个话题活动空间**：自指参数**显式传值即覆盖自动填充**，故跳别的话题直接 `sdk.nav.internal('/tag', { hashtag: '另一个话题名' })` 即可（同理 `/activity` 传别的 `uuid`）——目标从哪来（写死 / 页面自己的数据源）由你决定，SDK 不提供"相关话题列表"这类数据源。
 
 不放行（宿主会拒）：`/collection/publish`、`/picture-selector`、`/webview`。
 
 > SDK 做运行期白名单校验（非白名单 route 抛错）。`guest` 上下文（仅本地 dev 无宿主可达）下 `nav.internal` 内部转深链；生产入口恒为宿主内嵌，手机浏览器宿主会自动唤起 App。
+
+## 申请创建话题活动空间 — `sdk.nav.applyHost()`
+
+- **不接受参数**：跳转到运营配置的申请表单（飞书多维表单），prefill 的当前话题名 / 用户昵称 / 用户 UID **全由宿主本地态直接拼**，页面/SDK 拿不到这些字段、也不经手（与 `getEmbedToken` 不下发宿主 token 同一不变量）。
+- 运营未配置申请表单 URL 时，宿主报 `not-configured`，SDK 侧表现为 `BridgeError`（`code: 'rejected'`）——**建议包一层 try/catch，未配置时不渲染入口或降级隐藏**，不要假设恒可用。
+- `guest` 上下文（仅本地 dev 无宿主可达）：本地不跳转，仅 console 提示；生产入口恒为宿主内嵌。
+
+```ts
+try {
+  await sdk.nav.applyHost();
+} catch {
+  // 未配置申请表单 / bridge 异常：隐藏这个入口即可，不必给用户报错
+}
+```
 
 ## 鉴权 / token 模型
 

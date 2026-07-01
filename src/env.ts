@@ -79,6 +79,7 @@ export function buildCapabilities(env: EnvResult): Set<Capability> {
     caps.add(Capability.Bridge);
     caps.add(Capability.NavInternal);
     caps.add(Capability.NavExternal);
+    caps.add(Capability.NavApplyHost);
     caps.add(Capability.Toast);
     caps.add(Capability.Viewport);
     caps.add(Capability.EventBack);

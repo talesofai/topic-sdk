@@ -82,6 +82,10 @@
               log("nav", "[nav.external] url=" + (m.params && m.params.url));
               reply(m.id, null);
               break;
+            case "nav.applyHost":
+              log("nav", "[nav.applyHost] (真宿主会用本地 hashtag/currentUser/申请表单配置拼 prefill URL 后跳转 /webview)");
+              reply(m.id, null);
+              break;
             case "ui.toast":
               log("evt", "[toast] " + (m.params && m.params.text));
               reply(m.id, null);

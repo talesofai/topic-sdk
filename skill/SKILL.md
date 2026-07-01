@@ -93,8 +93,10 @@ description: >-
 - **参数契约**：自指路由（`/topic` `/tag` `/activity`）省略参数时 SDK 自动从当前页 URL 填；per-item 路由（`/oc` `/user` `/collection/interaction`）必须传 `uuid`（来自被点卡片）。**漏传/传错会被 SDK 拦下（构建期类型 + 运行期 throw），不会静默白屏**——详见 cheatsheet 参数表。
   > **caveat**：「拦下不静默白屏」**仅对你显式调用 `sdk.nav.internal(...)` 成立**。如果你写的是原生 `<a href="...">`，SDK 的链接拦截器会接管它并 per-item 调 `nav.internal`，但调用挂了 `.catch(() => {})`——缺 `uuid` 抛的错会被**静默吞掉**（不抛、无提示）。所以 per-item 跳转（作品/角色/用户详情）**务必显式写 `sdk.nav.internal('/oc', { uuid })`**，不要依赖原生 `<a>` 自动拦截来传 per-item 参数。
 - `sdk.nav.external(url)`：外跳（embedded 走 bridge；guest 走 `window.open`）。
+- **跳到另一个话题活动空间**：`/tag` `/topic` 是自指路由，显式传 `hashtag` 即覆盖当前话题，直接 `sdk.nav.internal('/tag', { hashtag: 'xxx' })` 跳别的话题——目标 hashtag 从哪来（写死 / 页面自己的数据源）由你决定，SDK 不提供"相关话题列表"。
+- `sdk.nav.applyHost()`：「申请创建话题活动空间」跳转，跳运营配置的申请表单（飞书多维表单）。**不接受参数**——当前话题名 + 用户昵称/UID 的 prefill 全由宿主本地态拼，页面拿不到这些字段。运营未配置申请表单时抛 `BridgeError`，**用 try/catch 包一层，未配置就不渲染这个入口**。
 
-**校验门**：所有 `nav.internal` 的 route 都在白名单内；**per-item** 写意图（点赞/关注/收藏/看详情）一律走 `nav.internal` 跳原生页/由宿主唤起 App，**绝不在页面内尝试本地写**。注意区分:**页面级**的 返回/分享/主页/登录/举报 **一概不画**（宿主顶栏已提供,D9）——别把"承载 per-item 写意图"误推广成"画一排导航/分享按钮"。
+**校验门**：所有 `nav.internal` 的 route 都在白名单内；**per-item** 写意图（点赞/关注/收藏/看详情）一律走 `nav.internal` 跳原生页/由宿主唤起 App，**绝不在页面内尝试本地写**。注意区分:**页面级**的 返回/分享/主页/登录/举报 **一概不画**（宿主顶栏已提供,D9）——别把"承载 per-item 写意图"误推广成"画一排导航/分享按钮"。`applyHost()` 这类内容区自己的 CTA 按钮(如"申请创建你自己的话题空间")不算 D9 违规——D9 禁的是仿冒/重复宿主顶栏,不是内容区本该有的功能入口。
 
 ## 6. 自测
 

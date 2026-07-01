@@ -214,6 +214,7 @@ export enum Capability {
   Bridge = "bridge",
   NavInternal = "nav.internal",
   NavExternal = "nav.external",
+  NavApplyHost = "nav.applyHost",
   Toast = "ui.toast",
   Viewport = "ui.viewport",
   EventBack = "event.back",
@@ -399,6 +400,16 @@ export interface SDKNav {
    * guest: window.open(url, '_blank')
    */
   external(url: string): Promise<void>;
+
+  /**
+   * 申请创建/主持一个新话题活动空间：跳转到运营配置的申请表单(飞书多维表单)，宿主自动带上
+   * 当前话题名 + 当前登录用户昵称/UID 的 prefill 参数。**不接受参数**——SDK/页面拿不到、也不经手
+   * 这些用户数据，全由宿主本地态直接拼 URL(与 `getEmbedToken` 不下发宿主 token 同一不变量)。
+   *
+   * 运营未配置申请表单时抛 `BridgeError`（宿主报 not-configured）。
+   * guest 上下文（仅本地 dev 无宿主）本地不跳转，仅 console 提示；生产入口恒为宿主内嵌。
+   */
+  applyHost(): Promise<void>;
 }
 
 export interface SDKUi {

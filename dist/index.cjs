@@ -489,6 +489,7 @@ var Capability = /* @__PURE__ */ ((Capability2) => {
   Capability2["Bridge"] = "bridge";
   Capability2["NavInternal"] = "nav.internal";
   Capability2["NavExternal"] = "nav.external";
+  Capability2["NavApplyHost"] = "nav.applyHost";
   Capability2["Toast"] = "ui.toast";
   Capability2["Viewport"] = "ui.viewport";
   Capability2["EventBack"] = "event.back";
@@ -542,6 +543,7 @@ function buildCapabilities(env) {
     caps.add("bridge" /* Bridge */);
     caps.add("nav.internal" /* NavInternal */);
     caps.add("nav.external" /* NavExternal */);
+    caps.add("nav.applyHost" /* NavApplyHost */);
     caps.add("ui.toast" /* Toast */);
     caps.add("ui.viewport" /* Viewport */);
     caps.add("event.back" /* EventBack */);
@@ -697,6 +699,16 @@ var SDKNavImpl = class {
       throw new UnsupportedError("nav.external", this._context);
     }
     await this._bridge.send("nav.external", { url });
+  }
+  async applyHost() {
+    if (this._context === "guest") {
+      console.info("[topic-sdk] nav.applyHost() \u672C\u5730 dev \u65E0\u5BBF\u4E3B\u4E0D\u8DF3\u8F6C;\u751F\u4EA7\u7531\u5BBF\u4E3B\u7528\u672C\u5730\u7528\u6237\u6001\u62FC URL \u540E\u8DF3\u8F6C");
+      return;
+    }
+    if (!this._bridge) {
+      throw new UnsupportedError("nav.applyHost", this._context);
+    }
+    await this._bridge.send("nav.applyHost");
   }
 };
 

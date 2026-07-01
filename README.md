@@ -57,7 +57,7 @@ const page = await sdk.topic.listStories(hashtag, { pageIndex: 0, pageSize: 20, 
 ### 核心概念
 
 - **三种运行上下文**:`app`(原生 App 内嵌) / `web-embedded`(浏览器内嵌,手机/桌面) / `guest`(无宿主,仅本地 `pnpm dev` 自测可达——生产入口恒为宿主内嵌)。`sdk.env` 自动探测,数据接口在任意上下文均可调(无 token 时匿名返回 `viewer=null`,不报错)。
-- **只读 + 导航漏斗**:数据接口(`sdk.topic` / `sdk.activity` / `sdk.rank`)全只读;一切"写意图"统一走 **`sdk.nav.internal(route, query?)`** 跳产品内页——原生 App 内站内跳、手机浏览器里**自动唤起 App**、桌面站内跳。**没有 `guest.openApp`,没有写方法。**
+- **只读 + 导航漏斗**:数据接口(`sdk.topic` / `sdk.activity` / `sdk.rank`)全只读;一切"写意图"统一走 **`sdk.nav.internal(route, query?)`** 跳产品内页——原生 App 内站内跳、手机浏览器里**自动唤起 App**、桌面站内跳。**没有 `guest.openApp`,没有写方法。** 跳别的话题活动空间也走它:`sdk.nav.internal('/tag', { hashtag })` 显式传参即覆盖当前话题。另有 `sdk.nav.applyHost()` 承载"申请创建话题活动空间"跳转(飞书表单,宿主本地拼 prefill,页面不经手用户数据)。
 - **nav.internal 参数兜底**(传错/漏传不会再静默白屏):
   - **自指路由** `/topic` `/tag` `/activity`:参数可省,SDK 从当前页 `?hashtag=`/`?activity_uuid=` 自动填(可覆盖)。
   - **per-item 路由** `/oc` `/user` `/collection/interaction`:必须传 `uuid`(来自被点卡片),漏传**构建期类型 + 运行期都会报错打回**。

@@ -9,3 +9,4 @@
 - 运行期防护：原生 `<a>` 点击全局拦截改走 bridge（不逃逸 OSS 源）、`history.pushState/replaceState` 在嵌入态禁用、`tokenTimeout` < 1000ms 自动 clamp。
 - 契约与已部署后端对齐：`viewer` 仅 `{ subscribed, canEdit }`；`Leaderboard.startTime/endTime`、`StoryCard.aspect`、`*.author.uuid`、`CreatorCard.uuid` 等可空；`parentType: string[]`；`oc`/`elementum` 榜单仅 `at='latest'`。
 - 附带 `skill/`：Claude Code 创作者引导 skill（SKILL.md + 合规 checklist + 离线 API 速查 + vite/react 脚手架）。
+- 新增 `sdk.nav.applyHost()`：承载「申请创建话题活动空间」跳转（飞书表单）。**不接受参数**——当前话题名/用户昵称/UID 全由宿主本地态直接拼 prefill URL，SDK/页面拿不到这些字段；运营未配置申请表单时抛 `BridgeError`。`sdk.nav.internal('/tag'|'/topic', { hashtag })` 显式传参即可跳到另一个话题活动空间（复用既有自指路由覆盖语义，非新增能力）。
