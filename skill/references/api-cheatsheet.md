@@ -176,7 +176,7 @@ interface CreatorCard {
 
 ## 申请创建话题活动空间 — `sdk.nav.applyHost()`
 
-- **不接受参数**：跳转到运营配置的申请表单（飞书多维表单），prefill 的当前话题名 / 用户昵称 / 用户 UID **全由宿主本地态直接拼**，页面/SDK 拿不到这些字段、也不经手（与 `getEmbedToken` 不下发宿主 token 同一不变量）。
+- **不接受参数**：跳转到运营配置的申请表单（飞书多维表单），prefill 的用户昵称 / 用户 UID（**不含话题名**）**全由宿主本地态直接拼**，页面/SDK 拿不到这些字段、也不经手（与 `getEmbedToken` 不下发宿主 token 同一不变量）。
 - 运营未配置申请表单 URL 时，宿主报 `not-configured`，SDK 侧表现为 `BridgeError`（`code: 'rejected'`）——**建议包一层 try/catch，未配置时不渲染入口或降级隐藏**，不要假设恒可用。
 - `guest` 上下文（仅本地 dev 无宿主可达）：本地不跳转，仅 console 提示；生产入口恒为宿主内嵌。
 

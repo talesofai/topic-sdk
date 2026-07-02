@@ -403,7 +403,7 @@ export interface SDKNav {
 
   /**
    * 申请创建/主持一个新话题活动空间：跳转到运营配置的申请表单(飞书多维表单)，宿主自动带上
-   * 当前话题名 + 当前登录用户昵称/UID 的 prefill 参数。**不接受参数**——SDK/页面拿不到、也不经手
+   * 当前登录用户昵称/UID 的 prefill 参数(不含话题名)。**不接受参数**——SDK/页面拿不到、也不经手
    * 这些用户数据，全由宿主本地态直接拼 URL(与 `getEmbedToken` 不下发宿主 token 同一不变量)。
    *
    * 运营未配置申请表单时抛 `BridgeError`（宿主报 not-configured）。
