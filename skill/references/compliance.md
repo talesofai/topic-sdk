@@ -4,7 +4,7 @@
 
 ## A. 数据只读 / 鉴权
 - [ ] 页面内**不含任何写接口调用**（点赞/收藏/关注/发布/删除/评论等）。
-- [ ] 只持 `embed token`（`token_type='embed'`）；**不持、不存储、不传递**用户的 `x-token`。
+- [ ] 只持 `embed token`（`token_type='embed'`）；**不持、不存储、不传递**用户完整登录态。
 - [ ] embed token **不写入** `localStorage` / `sessionStorage` / `cookie`（内存持有即可）。
 - [ ] `onAuthLost` / token 为 null 时降级匿名展示，**不抛错、不阻塞渲染**。
 

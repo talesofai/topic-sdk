@@ -78,7 +78,7 @@
 | # | 问用户的问题（大白话） | 对应技术字段 |
 |---|---|---|
 | Q1 | 这个话题页对应哪个话题？请提供话题的 `activity_uuid`（平台/运营已分配，形如一串字母数字）。 | `.env` 的 `NIETA_ACTIVITY_UUID` |
-| Q2 | 用你自己的账号登录 nieta-app，进入这个话题页，点右上角「⋯」→「开发者菜单」→「生成开发令牌」，拿到 **dev 开发令牌**（scoped，7 天有效，绑定本话题活动），用来发草稿调试。**不要提供你的完整登录 token / x-token。** | `.env` 的 `NIETA_DEV_PUBLISH_TOKEN` |
+| Q2 | 用你自己的账号登录 nieta-app，进入这个话题页，点右上角「⋯」→「开发者菜单」→「生成开发令牌」，拿到 **dev 开发令牌**（scoped，鉴权头 `x-dev-publish-token`，7 天有效，绑定本话题活动），用来发草稿调试。**不要提供你的完整登录态。** | `.env` 的 `NIETA_DEV_PUBLISH_TOKEN` |
 | Q3 | 页面里有"查看作品详情"这类跳转按钮，你希望点了之后跳到 App 里的哪个页面？（例如：跳作品详情页、跳话题页、跳排行榜……） | `sdk.nav.internal` 的 route 参数 |
 | Q4 | 页面里展示榜单数据，是要展示日榜、周榜还是月榜？是作品榜、创作者榜，还是 OC/元素榜？ | `sdk.rank.get(entity, window, at)` 的参数 |
 | Q5 | 页面里展示的精选内容对应活动的哪个 tab？（如果你知道 tab key 就填，不知道可以让 agent 用 `sdk.activity.listTabs(uuid)` 动态查） | `sdk.activity.listSelectedStories` 的 tabKey |
@@ -357,7 +357,7 @@ function navigate(view: string) { currentView = view; renderView(); }
 **默认处理**：
 1. 优先去掉该第三方接口依赖：能用 SDK 只读数据替代的（话题/作品/榜单）一律替代；纯展示的外站内容能本地化的按 §3.4 本地化。
 2. 如果该接口返回的内容要用图片展示（外站图床）→ 见 §3.4 资源本地化。
-3. 该接口不能持有用户 x-token，不能做写操作，只能纯读/展示。
+3. 该接口不能持有用户完整登录态，不能做写操作，只能纯读/展示。
 4. 若确实无法去掉该外站接口依赖（需放宽 CSP `connect-src`）：**停下来报告内部团队**，由内部判断是否信任该来源并放行——**agent 不改 deploy.mjs 的 CSP、不替用户做安全判断**。
 
 ---
