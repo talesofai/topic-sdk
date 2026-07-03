@@ -391,6 +391,20 @@ async function main() {
   const files = collectDistFiles();
   info(`dist/ 共 ${files.length} 个文件待上传。`);
 
+  // sourcemap 强制门：每个 .js/.mjs 必须有同名 .map(vite.config sourcemap:"hidden" 已配,map 会生成但 HTML 不引用)。
+  // 上传后审查侧靠 .map 还原源码做源码级审查;缺 map = 上线安全审查会退化为压缩产物级(可靠性骤降)。
+  // 这里发布前 fail-fast:少一个 map 就打回,确保走标准流程的每一版都可被源码级审查。
+  const relKeys = new Set(files.map((f) => f.relKey.replace(/\\/g, "/")));
+  const missingMaps = files
+    .map((f) => f.relKey.replace(/\\/g, "/"))
+    .filter((k) => /\.m?js$/i.test(k) && !relKeys.has(k + ".map"));
+  if (missingMaps.length) {
+    fail(
+      `以下 .js 缺少对应 .map（sourcemap 缺失，审查无法做源码级还原）：\n  - ${missingMaps.join("\n  - ")}\n` +
+        `请确认 vite.config 的 build.sourcemap 为 "hidden"（脚手架默认已配），重新 build 后重试。`,
+    );
+  }
+
   // 大小预检（早于上传 fail，复用 collectDistFiles 的 size）：
   // 任一文件 > 10MB，或所有文件总和 > 100MB，直接打回。常量与后端一致。
   let totalBytes = 0;
