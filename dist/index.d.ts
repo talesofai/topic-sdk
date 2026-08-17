@@ -438,6 +438,34 @@ declare class UnsupportedError extends Error {
 }
 
 /**
+ * OSS 图片处理参数化：拼接 `x-oss-process`（resize/format/quality）。
+ * 与 talesofai 其余前端（weapp/event/bff 的 getImageLink）同一套 OSS 图片处理约定，
+ * 移植到这里是为了让内嵌页也别再把原图尺寸直出——不同卡片位置渲染宽度不同，
+ * 高分屏（devicePixelRatio > 1）不按比例多请求像素会糊，全量按比例请求又会浪费流量。
+ */
+interface OssImageOptions {
+    /** 目标 CSS 展示宽度（px）。省略则不做 resize，只处理 format/quality。 */
+    width?: number;
+    /** 设备像素比倍率；省略则取 `window.devicePixelRatio`（非浏览器环境兜底 1），并 clamp 到 [1, MAX_DPR]。 */
+    dpr?: number;
+    /** 输出质量 1-100，默认 80（与其余前端一致）。 */
+    quality?: number;
+    /** 是否转 webp，默认 true。 */
+    webp?: boolean;
+}
+/**
+ * 按目标展示宽度 + 设备像素比拼接 OSS 图片处理参数。
+ * 卡片封面/头像等按实际渲染宽度传 `width`（如缩略图 200、大图 750），SDK 按屏幕 dpr 换算成实取像素宽。
+ * 非 http(s) / 空值原样返回（不是 OSS 直出图的场景，如已经带了别的 CDN 参数，不代为处理）。
+ */
+declare function ossImage(source: string | null | undefined, options?: OssImageOptions): string | null;
+/**
+ * 生成 1x/2x/3x 三档 `srcset`（配合 `<img sizes>` 用），让浏览器按实际设备像素比自己选图。
+ * `width` 是 1x（CSS px）基准宽度；2x/3x 档在此基础上按比例放大取图。
+ */
+declare function ossImageSrcSet(source: string | null | undefined, width: number, options?: Omit<OssImageOptions, "dpr" | "width">): string | null;
+
+/**
  * 初始化并返回 TopicSDK 实例。
  *
  * 初始化序列：
@@ -449,4 +477,4 @@ declare class UnsupportedError extends Error {
  */
 declare function createTopicSDK(options?: TopicSDKOptions): Promise<TopicSDK>;
 
-export { type AllowedRoute, BridgeClient, type BridgeClient$1 as BridgeClientType, BridgeError, type CampaignCard, Capability, type CharacterCard, type ClientContext, type CreatorCard, type HelloResult, type HighlightPage, type Leaderboard, type LoreEvent, type MyStoryKind, type Page, PageCursor, type RankEntity, type RankEntry, type RankWindow, type RichText, type SDKActivity, type SDKAuth, type SDKEvents, type SDKNav, type SDKRank, type SDKTopic, type SDKUi, type StoryCard, TopicApiError, type TopicDetail, type TopicSDK, type TopicSDKOptions, type TopicTab, UnsupportedError, type ViewportInfo, createTopicSDK };
+export { type AllowedRoute, BridgeClient, type BridgeClient$1 as BridgeClientType, BridgeError, type CampaignCard, Capability, type CharacterCard, type ClientContext, type CreatorCard, type HelloResult, type HighlightPage, type Leaderboard, type LoreEvent, type MyStoryKind, type OssImageOptions, type Page, PageCursor, type RankEntity, type RankEntry, type RankWindow, type RichText, type SDKActivity, type SDKAuth, type SDKEvents, type SDKNav, type SDKRank, type SDKTopic, type SDKUi, type StoryCard, TopicApiError, type TopicDetail, type TopicSDK, type TopicSDKOptions, type TopicTab, UnsupportedError, type ViewportInfo, createTopicSDK, ossImage, ossImageSrcSet };

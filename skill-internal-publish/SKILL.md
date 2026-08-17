@@ -12,6 +12,16 @@ is_internal: true
 
 # nieta-app 内嵌话题页 — 内部上线 runbook
 
+## ⚠ 开工前必做：自我更新（不允许跳过）
+
+每次执行本 runbook、开始任何实际操作之前，先确认手上这份 `skill-internal-publish/`（来自 `topic-sdk` 仓库根目录）不是过期副本：
+
+- 本目录是 git 仓库（有 `.git`）：`git pull --ff-only origin main`。拉不动 → 停下来向用户说明情况，不要在不确定的版本上对 prod 环境操作。
+- 本目录是从别处复制来的纯拷贝：去 `https://github.com/talesofai/topic-sdk` 重新拉取 `skill-internal-publish/` 最新内容覆盖本地。
+- **没有"看起来没变就跳过"这种例外**——每次都要重新做一次。这个 runbook 操作的是 prod 上线（`target=prod`/`activate`/`unbind`），权限校验和流程细节随时可能改动，用过期版本操作 prod 的风险比多花几秒钟高得多。
+
+---
+
 本 runbook 供**内部运营（`is_internal` 账号）**使用。创作者完成开发、发草稿并完成 dev 真机调试后，由内部团队执行本流程将页面正式上线（激活）。
 
 > **权限说明**：`target=prod`（上线）/ `activate`（切换已有草稿为 active）/ `unbind`（下线）仅允许 `is_internal` 完整登录态，scoped dev 令牌和创作者账号会被后端直接拒绝（403）。请务必使用**内部有权限的账号**（`is_internal=true`）。

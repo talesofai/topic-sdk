@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { type StoryCard, type TopicDetail, type TopicSDK } from "@talesofai/topic-sdk";
+import { ossImage, type StoryCard, type TopicDetail, type TopicSDK } from "@talesofai/topic-sdk";
 import { getHashtag, getSdk } from "./sdk";
 
 /**
@@ -83,7 +83,8 @@ export function App() {
           >
             {s.coverUrl && (
               <img
-                src={s.coverUrl}
+                // 列表卡片按渲染宽度取图（这里约 340px），别把原图直出——ossImage 按 devicePixelRatio 自动适配高分屏。
+                src={ossImage(s.coverUrl, { width: 340 }) ?? undefined}
                 alt={s.title ?? ""}
                 // aspect 可空 → 兜底
                 style={{ width: "100%", aspectRatio: s.aspect ?? "1 / 1", objectFit: "cover", borderRadius: 6 }}

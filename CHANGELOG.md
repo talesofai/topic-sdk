@@ -1,5 +1,12 @@
 # @talesofai/topic-sdk
 
+## Unreleased
+
+### Minor Changes
+
+- 新增 `ossImage(url, { width, dpr?, quality?, webp? })` / `ossImageSrcSet(url, width)`：按渲染宽度 + 设备像素比拼接 OSS `x-oss-process`（resize/format/quality），与 talesofai 其余前端（weapp/event/bff 的 `getImageLink`）同一套图片处理约定。scaffold `App.tsx` 示例与 skill 文档已同步改用它包 `coverUrl`/`avatarUrl`，不再原图直出。
+- `skill/`、`skill-internal-publish/` 与 `topic-embed-review` 三处 SKILL.md 顶部新增强制自我更新步骤：每次执行前先确认本地不是过期副本（git 仓库则 `git pull`，纯拷贝则重新从源仓库拉取覆盖），不允许跳过。
+
 ## 0.1.0-dev.0
 
 ### Minor Changes

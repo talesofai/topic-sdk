@@ -62,6 +62,7 @@ const page = await sdk.topic.listStories(hashtag, { pageIndex: 0, pageSize: 20, 
   - **自指路由** `/topic` `/tag` `/activity`:参数可省,SDK 从当前页 `?hashtag=`/`?activity_uuid=` 自动填(可覆盖)。
   - **per-item 路由** `/oc` `/user` `/collection/interaction`:必须传 `uuid`(来自被点卡片),漏传**构建期类型 + 运行期都会报错打回**。
 - **可空字段**:`detail.startTime/endTime/title`、`StoryCard.aspect`、`*.author.uuid`、`Leaderboard.startTime/endTime` 等均可能为 `null`,渲染前判空(详见 cheatsheet)。
+- **图片按尺寸取**:`coverUrl`/`avatarUrl` 都是 OSS 直出图,渲染前用 `ossImage(url, { width })` 包一层(按卡片渲染宽度 + 设备像素比拼 OSS resize/format 参数),别把原图尺寸直出——详见 cheatsheet「图片」一节。
 
 完整契约、AllowedRoute 白名单与参数表、错误模型、三态降级见配套 skill 的 `references/api-cheatsheet.md`。
 

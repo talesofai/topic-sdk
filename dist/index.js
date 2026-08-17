@@ -711,6 +711,40 @@ var SDKUiImpl = class {
   }
 };
 
+// src/image.ts
+var DEFAULT_QUALITY = 80;
+var MAX_DPR = 3;
+function resolveDpr(explicit) {
+  if (typeof explicit === "number" && explicit > 0)
+    return Math.min(explicit, MAX_DPR);
+  const detected = typeof window !== "undefined" && typeof window.devicePixelRatio === "number" ? window.devicePixelRatio : 1;
+  return Math.min(Math.max(detected, 1), MAX_DPR);
+}
+function buildOssProcess(pixelWidth, quality, webp) {
+  const styles = ["image", "auto-orient,1"];
+  if (pixelWidth && pixelWidth > 0)
+    styles.push(`resize,m_lfit,w_${Math.round(pixelWidth)}`);
+  if (webp)
+    styles.push("format,webp");
+  styles.push(`quality,q_${quality}`);
+  return styles.join("/");
+}
+function ossImage(source, options) {
+  if (!source)
+    return null;
+  const { width, quality = DEFAULT_QUALITY, webp = true, dpr } = options ?? {};
+  const pixelWidth = width && width > 0 ? width * resolveDpr(dpr) : void 0;
+  const process = buildOssProcess(pixelWidth, quality, webp);
+  const sep = source.includes("?") ? "&" : "?";
+  return `${source}${sep}x-oss-process=${process}`;
+}
+function ossImageSrcSet(source, width, options) {
+  if (!source)
+    return null;
+  const scales = [1, 2, 3];
+  return scales.map((scale) => `${ossImage(source, { ...options, width, dpr: scale })} ${scale}x`).join(", ");
+}
+
 // src/index.ts
 var SDK_VERSION = "0.1.0";
 function installLinkInterceptor(nav) {
@@ -847,6 +881,8 @@ export {
   PageCursor,
   TopicApiError,
   UnsupportedError,
-  createTopicSDK
+  createTopicSDK,
+  ossImage,
+  ossImageSrcSet
 };
 //# sourceMappingURL=index.js.map

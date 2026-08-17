@@ -13,6 +13,17 @@ description: >-
 
 # nieta-app 自定义内嵌话题页 — 搭建、开发与 dev 发布 skill
 
+## ⚠ 开工前必做：自我更新（不允许跳过）
+
+每次执行本 skill、开始任何实际工作之前，先确认手上这份 `skill/`（以及消费方项目里 `@talesofai/topic-sdk` 依赖）不是过期副本：
+
+- 本目录是 git 仓库（有 `.git`，比如直接在 `topic-sdk` 仓库里工作）：`git pull --ff-only origin main`。拉不动（本地有未提交改动导致冲突等）→ 停下来向用户说明情况，不要在不确定的版本上继续。
+- 本目录是从别处复制来的纯拷贝（没有 `.git`，比如放进了 cohub 的 skills 目录）：去 `https://github.com/talesofai/topic-sdk` 重新拉取 `skill/` 目录的最新内容，整体覆盖本地旧副本再继续。
+- 若正在给创作者项目跑 `pnpm install`：确认锁定解析到的 `@talesofai/topic-sdk` 确实是最新 `dist/`（git 依赖有本地缓存，必要时 `pnpm update @talesofai/topic-sdk` 或清缓存重装）。
+- **没有"看起来最近更新过就跳过"这种例外**——每次执行本 skill 都要重新做一次这一步。SDK 契约、红线、脚手架随时可能已经改过，用过期版本干活出的问题算没做这一步的责任。
+
+---
+
 你（agent）正代创作者开发一个**内嵌话题页**：一个独立的 Web 单页应用，由 nieta-app 在 `/tag?hashtag=X` 路由内以 **iframe** 内嵌。页面只**读**产品内数据（`/v1/embed/*`），所有写动作由宿主固定浮层承载，页面既不绘制也不调用。
 
 按下面的工作流走，每步带**校验门**，过了再进下一步。详细契约见 `references/api-cheatsheet.md`，红线见 `references/compliance.md`（**交付前必须逐项过**）。
@@ -84,8 +95,9 @@ description: >-
 - `listCharacters` 的 `parentType` 是 `string[]`（省略时后端默认 `['oc','elementum']`）。
 - `sdk.rank.get(entity, window, at)`：`oc`/`elementum` **只支持 `at='latest'`**，传时间戳会抛错。
 - 分页用 `page.hasNext` 判断是否还有下一页（不要自己用 total 推算）。
+- **`coverUrl`/`avatarUrl` 一律用 `ossImage(url, { width })` 包一层再塞进 `<img src>`**（`width` 传该卡片实际渲染宽度，不是原图宽度），不要把原图直出。详见 cheatsheet「图片」一节的推荐宽度参考值。
 
-**校验门**：`getDetail` + `listStories` 能渲染；对所有可空字段已判空（grep 一遍 `.uuid`/`.aspect`/`.startTime` 的使用点）。
+**校验门**：`getDetail` + `listStories` 能渲染；对所有可空字段已判空（grep 一遍 `.uuid`/`.aspect`/`.startTime` 的使用点）；所有图片字段都经过 `ossImage` 处理（grep 一遍 `coverUrl`/`avatarUrl` 的使用点，确认没有裸传进 `<img src>`）。
 
 ## 5. 导航（唯一漏斗：nav.internal）
 

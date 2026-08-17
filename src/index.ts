@@ -51,6 +51,8 @@ export type {
 export { BridgeClient } from "./bridge.js";
 export { PageCursor } from "./data.js";
 export { BridgeError, TopicApiError, UnsupportedError } from "./errors.js";
+export { ossImage, ossImageSrcSet } from "./image.js";
+export type { OssImageOptions } from "./image.js";
 export { Capability } from "./types.js";
 
 const SDK_VERSION = "0.1.0";
