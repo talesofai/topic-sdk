@@ -37,15 +37,24 @@ function buildOssProcess(pixelWidth: number | undefined, quality: number, webp: 
 /**
  * 按目标展示宽度 + 设备像素比拼接 OSS 图片处理参数。
  * 卡片封面/头像等按实际渲染宽度传 `width`（如缩略图 200、大图 750），SDK 按屏幕 dpr 换算成实取像素宽。
- * 非 http(s) / 空值原样返回（不是 OSS 直出图的场景，如已经带了别的 CDN 参数，不代为处理）。
+ * 非 http(s)（如 `data:` 内联图）解析失败时原样返回，不强行拼参数——`data:` URL 拼 `?x-oss-process=`
+ * 会把 base64 payload 直接拼坏。已经带 `x-oss-process` 的 URL（后端预处理过 / 重复调用）也原样返回，
+ * 不再叠加第二个同名 query key（OSS 对重复 key 的解析行为未定义）。
  */
 export function ossImage(source: string | null | undefined, options?: OssImageOptions): string | null {
   if (!source) return null;
+  let url: URL;
+  try {
+    url = new URL(source);
+  } catch {
+    return source;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return source;
+  if (url.searchParams.has("x-oss-process")) return source;
   const { width, quality = DEFAULT_QUALITY, webp = true, dpr } = options ?? {};
   const pixelWidth = width && width > 0 ? width * resolveDpr(dpr) : undefined;
-  const process = buildOssProcess(pixelWidth, quality, webp);
-  const sep = source.includes("?") ? "&" : "?";
-  return `${source}${sep}x-oss-process=${process}`;
+  url.searchParams.set("x-oss-process", buildOssProcess(pixelWidth, quality, webp));
+  return url.toString();
 }
 
 /**

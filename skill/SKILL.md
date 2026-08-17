@@ -17,8 +17,10 @@ description: >-
 
 每次执行本 skill、开始任何实际工作之前，先确认手上这份 `skill/`（以及消费方项目里 `@talesofai/topic-sdk` 依赖）不是过期副本：
 
-- 本目录是 git 仓库（有 `.git`，比如直接在 `topic-sdk` 仓库里工作）：`git pull --ff-only origin main`。拉不动（本地有未提交改动导致冲突等）→ 停下来向用户说明情况，不要在不确定的版本上继续。
-- 本目录是从别处复制来的纯拷贝（没有 `.git`，比如放进了 cohub 的 skills 目录）：去 `https://github.com/talesofai/topic-sdk` 重新拉取 `skill/` 目录的最新内容，整体覆盖本地旧副本再继续。
+> **例外**：如果你正在对 `topic-sdk` 仓库本身开发/提交代码（比如在某个 feature 分支上改 SDK 源码或本文档），你就是版本源头，跳过下面这一步——`git pull --ff-only origin main` 在领先 main 的分支上不是 fast-forward，硬跑只会把自己卡死。
+
+- 本目录是 git 仓库、且当前在 `main` 分支（`git branch --show-current` 确认）：`git pull --ff-only origin main`。拉不动（本地有未提交改动导致冲突等）→ 停下来向用户说明情况，不要在不确定的版本上继续。当前不在 `main`（比如在别人留下的 feature 分支上）：`git fetch origin main`，对照 `git log HEAD..origin/main` 看看落后多少，不要不问青红皂白就切分支/强制同步。
+- 本目录是从别处复制来的纯拷贝（没有 `.git`，比如放进了 cohub 的 skills 目录）：去 `https://github.com/talesofai/topic-sdk` 重新拉取 `skill/` 目录的最新内容，只覆盖 `SKILL.md`/`references/`/`assets/` 这些 skill 自身文件，不要动创作者项目自己的 `.env`/`dist/`/未提交改动。仓库如需鉴权（私有仓库），用你环境里已有的 GitHub 凭据；实在拿不到就如实告诉用户"无法确认新鲜度"，不要假装拉取成功了。
 - 若正在给创作者项目跑 `pnpm install`：确认锁定解析到的 `@talesofai/topic-sdk` 确实是最新 `dist/`（git 依赖有本地缓存，必要时 `pnpm update @talesofai/topic-sdk` 或清缓存重装）。
 - **没有"看起来最近更新过就跳过"这种例外**——每次执行本 skill 都要重新做一次这一步。SDK 契约、红线、脚手架随时可能已经改过，用过期版本干活出的问题算没做这一步的责任。
 

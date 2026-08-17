@@ -16,8 +16,10 @@ is_internal: true
 
 每次执行本 runbook、开始任何实际操作之前，先确认手上这份 `skill-internal-publish/`（来自 `topic-sdk` 仓库根目录）不是过期副本：
 
-- 本目录是 git 仓库（有 `.git`）：`git pull --ff-only origin main`。拉不动 → 停下来向用户说明情况，不要在不确定的版本上对 prod 环境操作。
-- 本目录是从别处复制来的纯拷贝：去 `https://github.com/talesofai/topic-sdk` 重新拉取 `skill-internal-publish/` 最新内容覆盖本地。
+> **例外**：如果你正在对 `topic-sdk` 仓库本身开发/提交代码，你就是版本源头，跳过下面这一步。
+
+- 本目录是 git 仓库、且当前在 `main` 分支：`git pull --ff-only origin main`。拉不动 → 停下来向用户说明情况，不要在不确定的版本上对 prod 环境操作。当前不在 `main`：`git fetch origin main` 看落后多少，不要擅自切分支/强制同步。
+- 本目录是从别处复制来的纯拷贝：去 `https://github.com/talesofai/topic-sdk` 重新拉取 `skill-internal-publish/` 最新内容覆盖本地（仅覆盖这个目录自身文件，不动你正在操作的创作者项目里的 `.env`）。
 - **没有"看起来没变就跳过"这种例外**——每次都要重新做一次。这个 runbook 操作的是 prod 上线（`target=prod`/`activate`/`unbind`），权限校验和流程细节随时可能改动，用过期版本操作 prod 的风险比多花几秒钟高得多。
 
 ---

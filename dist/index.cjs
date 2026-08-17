@@ -766,11 +766,20 @@ function buildOssProcess(pixelWidth, quality, webp) {
 function ossImage(source, options) {
   if (!source)
     return null;
+  let url;
+  try {
+    url = new URL(source);
+  } catch {
+    return source;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:")
+    return source;
+  if (url.searchParams.has("x-oss-process"))
+    return source;
   const { width, quality = DEFAULT_QUALITY, webp = true, dpr } = options ?? {};
   const pixelWidth = width && width > 0 ? width * resolveDpr(dpr) : void 0;
-  const process = buildOssProcess(pixelWidth, quality, webp);
-  const sep = source.includes("?") ? "&" : "?";
-  return `${source}${sep}x-oss-process=${process}`;
+  url.searchParams.set("x-oss-process", buildOssProcess(pixelWidth, quality, webp));
+  return url.toString();
 }
 function ossImageSrcSet(source, width, options) {
   if (!source)
