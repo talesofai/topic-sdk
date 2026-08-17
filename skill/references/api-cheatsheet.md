@@ -149,6 +149,21 @@ interface CreatorCard {
 }
 ```
 
+## 图片 — `ossImage` / `ossImageSrcSet`（别把原图直出）
+
+```ts
+import { ossImage, ossImageSrcSet } from '@talesofai/topic-sdk';
+
+ossImage(story.coverUrl, { width: 340 })           // 按渲染宽度 + devicePixelRatio 拼 x-oss-process
+ossImageSrcSet(story.coverUrl, 340)                 // "<url>?...w_340 1x, <url>?...w_680 2x, <url>?...w_1020 3x"
+```
+
+- `width` 传**卡片实际渲染的 CSS 宽度**（不是原图宽度）；SDK 按屏幕 `devicePixelRatio`（clamp 到 3x）自动换算成应取的像素宽，不用自己算。
+- 所有 `coverUrl` / `avatarUrl` 字段都是 OSS 直出图，**务必用 `ossImage` 包一层**再塞进 `<img src>`；纯展示图不需要原图分辨率，直出既拖慢加载也浪费流量。
+- 常见位置参考宽度（CSS px，按实际布局调整）：瀑布流/列表卡片封面 300–400、头像 40–80、Banner/大图 750。
+- 返回 `null`（输入为 `null`/`undefined` 时）；`<img src>` 上用 `?? undefined` 兜底。
+- 与其余产品线（weapp/event/bff 的 `getImageLink`）同一套 OSS 处理参数约定，不是内嵌页独有的新概念。
+
 ## 导航 — AllowedRoute v1 白名单
 
 `sdk.nav.internal(route, query?)` 的 route 必须 ∈下表。**参数契约按路由性质分两类，传错/漏传会被 SDK 拦下（构建期类型 + 运行期 throw），不会再静默白屏**：
